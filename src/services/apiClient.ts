@@ -1,11 +1,11 @@
 const resolveApiBaseUrl = (): string => {
   if (typeof window !== 'undefined' && window.__PROCURA_API_URL__) {
-    return window.__PROCURA_API_URL__;
+    return window.__PROCURA_API_URL__.replace(/\/+$/, '');
   }
   if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL;
+    return import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '').replace(/\/api(\/v1)?$/, '');
   }
-  return 'http://localhost:4000/api/v1';
+  return 'https://supplier-portal-backend-phi.vercel.app';
 };
 
 export const API_CONFIG = {
@@ -50,10 +50,11 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
     const errPayload = (await response.json().catch(() => ({}))) as {
       message?: string;
       error?: string;
+      detail?: string;
       code?: string;
     };
     throw new ApiClientError(
-      errPayload.message || errPayload.error || `API Error (${response.status})`,
+      errPayload.detail || errPayload.message || errPayload.error || `API Error (${response.status})`,
       response.status,
       errPayload.code
     );
