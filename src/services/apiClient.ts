@@ -1,15 +1,15 @@
+const BACKEND_URL = 'https://supplier-portal-backend-phi.vercel.app';
+
 const resolveApiBaseUrl = (): string => {
-  if (typeof window !== 'undefined' && window.__PROCURA_API_URL__) {
-    return window.__PROCURA_API_URL__.replace(/\/+$/, '');
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (typeof envUrl === 'string' && envUrl.startsWith('http')) {
+    return envUrl.replace(/\/+$/, '').replace(/\/api(\/v1)?$/, '');
   }
-  if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '').replace(/\/api(\/v1)?$/, '');
-  }
-  return 'https://supplier-portal-backend-phi.vercel.app';
+  return BACKEND_URL;
 };
 
 export const API_CONFIG = {
-  USE_LIVE_API: import.meta.env.VITE_USE_LIVE_API === 'true',
+  USE_LIVE_API: true,
   BASE_URL: resolveApiBaseUrl()
 };
 
