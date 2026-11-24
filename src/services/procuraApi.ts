@@ -26,15 +26,26 @@ export const ProcuraApiService = {
       return { user: matched, token: 'local-session-token' };
     }
 
-    const data = await apiRequest<LoginResponse>('/auth/login', {
+    const raw = await apiRequest<any>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password })
     });
 
-    if (data?.token) {
-      localStorage.setItem(JWT_STORAGE_KEY, data.token);
+    if (raw?.token) {
+      localStorage.setItem(JWT_STORAGE_KEY, raw.token);
     }
-    return data;
+
+    const user: User | null = raw?.user || (raw?.token ? {
+      id: raw.id || `USR-${Date.now()}`,
+      name: raw.name || email.split('@')[0],
+      nameAr: raw.name || email.split('@')[0],
+      email: email.trim(),
+      role: (raw.role || 'requester') as any,
+      department: 'Operations',
+      departmentAr: 'العمليات'
+    } : null);
+
+    return { user, token: raw?.token || '' };
   },
 
   // POST /auth/register
@@ -60,25 +71,32 @@ export const ProcuraApiService = {
       return { user: mockUser, token: 'local-session-token' };
     }
 
-    const data = await apiRequest<LoginResponse>('/auth/register', {
+    const raw = await apiRequest<any>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({
         name: payload.name,
-        nameAr: payload.nameAr || payload.name,
         email: payload.email,
         password: payload.password,
-        role: payload.role,
-        department: payload.department || 'Operations',
-        departmentAr: payload.departmentAr || 'العمليات'
+        role: payload.role
       })
     });
 
-    if (data?.token) {
-      localStorage.setItem(JWT_STORAGE_KEY, data.token);
+    if (raw?.token) {
+      localStorage.setItem(JWT_STORAGE_KEY, raw.token);
     }
-    return data;
-  },
 
+    const user: User | null = raw?.user || (raw?.token ? {
+      id: raw.id || `USR-${Date.now()}`,
+      name: raw.name || payload.name,
+      nameAr: raw.name || payload.name,
+      email: payload.email,
+      role: (raw.role || payload.role) as any,
+      department: payload.department || 'Operations',
+      departmentAr: payload.departmentAr || 'العمليات'
+    } : null);
+
+    return { user, token: raw?.token || '' };
+  },
   // GET /auth/me (Hydrates current session when JWT exists in localStorage)
   async getCurrentSession(): Promise<User | null> {
     if (!API_CONFIG.USE_LIVE_API) return null;
