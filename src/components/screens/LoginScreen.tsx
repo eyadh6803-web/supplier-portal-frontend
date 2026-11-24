@@ -9,6 +9,7 @@ import {
   Moon,
   RefreshCw,
   Sun,
+  UserPlus,
   X
 } from 'lucide-react';
 import { DEFAULT_PORTAL_PROFILES } from '../../data/mockData';
@@ -67,10 +68,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string }>({});
   const [authError, setAuthError] = useState('');
   const [loading, setLoading] = useState(false);
   const emailInputRef = useRef<HTMLInputElement | null>(null);
@@ -95,20 +98,42 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
-    const errs: { email?: string; password?: string } = {};
+    const errs: { name?: string; email?: string; password?: string } = {};
+    if (isRegisterMode && !fullName.trim()) errs.name = t.requiredField;
     if (!email.trim()) errs.email = t.requiredField;
     if (!password.trim()) errs.password = t.requiredField;
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
+    const activeRole = selectedRole || 'requester';
+    const currentPortal = PORTALS.find((p) => p.role === activeRole) || PORTALS[0];
+
     setLoading(true);
     try {
+      if (isRegisterMode) {
+        const res = await ProcuraApiService.register({
+          name: fullName.trim(),
+          nameAr: fullName.trim(),
+          email: email.trim(),
+          password,
+          role: activeRole,
+          department: currentPortal.deptEn,
+          departmentAr: currentPortal.deptAr
+        });
+        setLoading(false);
+        if (res?.user) {
+          onAuthenticated(res.user);
+        } else {
+          setAuthError(isRtl ? 'تعذر إنشاء الحساب، تأكد من البيانات' : 'Registration failed.');
+        }
+        return;
+      }
+
       const res = await ProcuraApiService.login(email, password);
       setLoading(false);
       if (res?.user) {
         onAuthenticated(res.user);
       } else if (!ProcuraApiService.isLive() && email.includes('@')) {
-        const activeRole = selectedRole || 'requester';
         const profileTemplate =
           DEFAULT_PORTAL_PROFILES.find((u) => u.role === activeRole) ||
           DEFAULT_PORTAL_PROFILES[0];
@@ -188,13 +213,28 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 )}
               </button>
               {!isDrawerOpen && (
-                <button
-                  type="button"
-                  onClick={() => handleSelectPortal('requester')}
-                  className="px-4 py-1.5 rounded-lg bg-[#E32236] hover:bg-[#C81B2D] text-white text-xs font-semibold transition whitespace-nowrap shrink-0 cursor-pointer"
-                >
-                  {t.signIn}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsRegisterMode(true);
+                      handleSelectPortal('requester');
+                    }}
+                    className={`px-3.5 py-1.5 rounded-lg border text-xs font-semibold transition whitespace-nowrap shrink-0 cursor-pointer ${headerControlBg} hover:border-[#E32236]/60`}
+                  >
+                    {isRtl ? 'حساب جديد' : 'Register'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsRegisterMode(false);
+                      handleSelectPortal('requester');
+                    }}
+                    className="px-4 py-1.5 rounded-lg bg-[#E32236] hover:bg-[#C81B2D] text-white text-xs font-semibold transition whitespace-nowrap shrink-0 cursor-pointer"
+                  >
+                    {t.signIn}
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -239,7 +279,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         </footer>
       </div>
 
-      {/* Slide-Out Sign-In Drawer */}
+      {/* Slide-Out Sign-In / Register Drawer */}
       <aside
         className={`fixed top-0 bottom-0 ${
           isRtl ? 'left-0 border-r' : 'right-0 border-l'
@@ -253,7 +293,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         aria-hidden={!isDrawerOpen}
       >
         <div className="overflow-y-auto">
-          <div className={`flex items-center justify-between pb-5 mb-6 border-b ${divider}`}>
+          <div className={`flex items-center justify-between pb-5 mb-5 border-b ${divider}`}>
             <div className="flex items-center gap-2 text-xs font-medium min-w-0">
               <span className={textMuted}>{t.portalLabel}</span>
               <span aria-hidden="true" className={textMuted}>
@@ -274,14 +314,56 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </button>
           </div>
 
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold tracking-tight">{t.welcomeBack}</h2>
-            <p className={`text-xs mt-1.5 leading-relaxed ${textMuted}`}>{t.signInSub}</p>
+          {/* Auth Mode Toggle (Sign In / Register) */}
+          <div className={`grid grid-cols-2 gap-1 p-1 rounded-lg border mb-5 ${drawerSubtle}`}>
+            <button
+              type="button"
+              onClick={() => {
+                setIsRegisterMode(false);
+                setAuthError('');
+                setErrors({});
+              }}
+              className={`py-1.5 rounded-md text-xs font-semibold transition cursor-pointer ${
+                !isRegisterMode
+                  ? `${isDark ? 'bg-[#191C24] text-[#F2F3F5]' : bgSurface} shadow-xs text-[#E32236]`
+                  : textMuted
+              }`}
+            >
+              {t.signIn}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsRegisterMode(true);
+                setAuthError('');
+                setErrors({});
+              }}
+              className={`py-1.5 rounded-md text-xs font-semibold transition cursor-pointer ${
+                isRegisterMode
+                  ? `${isDark ? 'bg-[#191C24] text-[#F2F3F5]' : bgSurface} shadow-xs text-[#E32236]`
+                  : textMuted
+              }`}
+            >
+              {isRtl ? 'إنشاء حساب' : 'Register'}
+            </button>
+          </div>
+
+          <div className="mb-5">
+            <h2 className="text-2xl font-bold tracking-tight">
+              {isRegisterMode ? (isRtl ? 'إنشاء حساب جديد' : 'Create Account') : t.welcomeBack}
+            </h2>
+            <p className={`text-xs mt-1.5 leading-relaxed ${textMuted}`}>
+              {isRegisterMode
+                ? isRtl
+                  ? 'اختر البوابة وسجّل بياناتك للوصول للنظام.'
+                  : 'Select your role portal and enter your details to register.'
+                : t.signInSub}
+            </p>
           </div>
 
           {/* Synchronized Portal Selector */}
           <div
-            className={`grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 rounded-lg border mb-6 ${drawerSubtle}`}
+            className={`grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 rounded-lg border mb-5 ${drawerSubtle}`}
           >
             {PORTALS.map((portal) => {
               const active = activePortalRole === portal.role;
@@ -303,13 +385,29 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </div>
 
           {authError && (
-            <div className="mb-5 p-3 rounded-lg bg-[#E32236]/10 border border-[#E32236]/30 text-[#E32236] text-xs font-medium flex items-center gap-2">
+            <div className="mb-4 p-3 rounded-lg bg-[#E32236]/10 border border-[#E32236]/30 text-[#E32236] text-xs font-medium flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{authError}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {isRegisterMode && (
+              <div>
+                <label className="block text-xs font-semibold mb-1.5">
+                  {isRtl ? 'الاسم الكامل' : 'Full Name'}
+                </label>
+                <input
+                  type="text"
+                  value={fullName}
+                  placeholder={isRtl ? 'أدخل اسمك الكامل' : 'Enter your full name'}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className={`w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none transition focus:border-[#E32236] ${drawerSubtle}`}
+                />
+                {errors.name && <p className="text-xs text-[#E32236] mt-1">{errors.name}</p>}
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-semibold mb-1.5">{t.email}</label>
               <input
@@ -357,16 +455,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               {loading ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>{t.signingIn}</span>
+                  <span>
+                    {isRegisterMode
+                      ? isRtl
+                        ? 'جاري التسجيل...'
+                        : 'Creating Account...'
+                      : t.signingIn}
+                  </span>
+                </>
+              ) : isRegisterMode ? (
+                <>
+                  <UserPlus className="w-4 h-4" />
+                  <span>{isRtl ? 'إنشاء حساب' : 'Create Account'}</span>
                 </>
               ) : (
                 <>
                   <span>{t.signIn}</span>
-                  {isRtl ? (
-                    <ArrowLeft className="w-4 h-4" />
-                  ) : (
-                    <ArrowRight className="w-4 h-4" />
-                  )}
+                  {isRtl ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
                 </>
               )}
             </button>
