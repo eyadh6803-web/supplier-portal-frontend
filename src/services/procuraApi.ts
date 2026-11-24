@@ -37,6 +37,48 @@ export const ProcuraApiService = {
     return data;
   },
 
+  // POST /auth/register
+  async register(payload: {
+    name: string;
+    nameAr?: string;
+    email: string;
+    password: string;
+    role: string;
+    department?: string;
+    departmentAr?: string;
+  }): Promise<LoginResponse> {
+    if (!API_CONFIG.USE_LIVE_API) {
+      const mockUser: User = {
+        id: `USR-${Date.now()}`,
+        name: payload.name,
+        nameAr: payload.nameAr || payload.name,
+        email: payload.email,
+        role: payload.role as any,
+        department: payload.department || 'Operations',
+        departmentAr: payload.departmentAr || 'العمليات'
+      };
+      return { user: mockUser, token: 'local-session-token' };
+    }
+
+    const data = await apiRequest<LoginResponse>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: payload.name,
+        nameAr: payload.nameAr || payload.name,
+        email: payload.email,
+        password: payload.password,
+        role: payload.role,
+        department: payload.department || 'Operations',
+        departmentAr: payload.departmentAr || 'العمليات'
+      })
+    });
+
+    if (data?.token) {
+      localStorage.setItem(JWT_STORAGE_KEY, data.token);
+    }
+    return data;
+  },
+
   // GET /auth/me (Hydrates current session when JWT exists in localStorage)
   async getCurrentSession(): Promise<User | null> {
     if (!API_CONFIG.USE_LIVE_API) return null;
