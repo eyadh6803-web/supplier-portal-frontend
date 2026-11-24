@@ -1,0 +1,4500 @@
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import * as THREE from 'three';
+import {
+  FileText, CheckCircle2, XCircle, Clock, ShieldCheck, Search, Filter,
+  Plus, ArrowRight, ArrowLeft, Upload, Sparkles, Building2, Users,
+  History, Eye, EyeOff, Sun, Moon, Globe, RotateCcw, Monitor,
+  AlertTriangle, ChevronRight, ChevronLeft, Download, Send, Trash2,
+  Edit3, Check, X, Layers, Box, Cpu, FileCheck, RefreshCw, LogOut,
+  SlidersHorizontal, Award, Zap, Lock, ExternalLink, Maximize2, Minimize2
+} from 'lucide-react';
+
+// ============================================================================
+// 1. GLOBAL TYPOGRAPHY & RTL/LTR STYLE INJECTOR
+// ============================================================================
+const FontAndStyleInjector = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    .font-en { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .font-ar { font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif; }
+    .font-mono-code { font-family: 'JetBrains Mono', monospace; }
+  `}</style>
+);
+
+// ============================================================================
+// 2. BILINGUAL DICTIONARY (ENGLISH LTR & NATIVE ARABIC RTL)
+// ============================================================================
+const TRANSLATIONS = {
+  en: {
+    brandSubtitle: 'ENTERPRISE PROCUREMENT & SUPPLIER PORTAL',
+    loginHeroTitle: 'Industrial Precision for Enterprise Sourcing.',
+    welcomeBack: 'Command Access Sign In',
+    signInSub: 'Authenticate with your enterprise role credentials to enter PROCURA.',
+    email: 'Enterprise Email',
+    password: 'Password',
+    signIn: 'Sign In',
+    signingIn: 'Authenticating...',
+    demoAccounts: 'Instant Role Access (Demo Environment)',
+    demoNotice: 'Simulated enterprise demo environment — switch roles anytime to inspect all workflows.',
+    requiredField: 'This field is required.',
+    invalidCreds: 'Invalid credentials. Select a demo role or verify your email.',
+    role_requester: 'Requester',
+    role_officer: 'Procurement Officer',
+    role_manager: 'Approver / Manager',
+    role_supplier: 'Supplier',
+    navRequests: 'Requests',
+    navCreateRequest: 'Create Request',
+    navApprovals: 'Approvals',
+    navAuditLog: 'Audit Log',
+    navSupplierRequests: 'Supplier Requests',
+    navAiReview: 'AI Extraction Review',
+    navComparison: 'Supplier Comparison',
+    resetDemo: 'Reset Demo',
+    presentationMode: 'Presentation Mode',
+    exitPresentation: 'Exit Presentation',
+    logOut: 'Sign Out',
+    requestsTitle: 'Purchase Requests',
+    requestsSubtitle: 'Centralized requisition ledger, quotation progress, and approval routing.',
+    newRequest: 'New Request',
+    searchPlaceholder: 'Search requests by title or ID...',
+    allStatuses: 'All Statuses',
+    reqId: 'Request ID',
+    reqTitle: 'Request Title',
+    quantity: 'Quantity',
+    estBudget: 'Estimated Budget',
+    status: 'Status',
+    createdDate: 'Created Date',
+    noRequests: 'No requests yet.',
+    loadingData: 'Synchronizing procurement records...',
+    errorLoading: 'Unable to load procurement records.',
+    retry: 'Retry',
+    simulateStates: 'View State:',
+    stateNormal: 'Active',
+    stateLoading: 'Loading',
+    stateEmpty: 'Empty',
+    stateError: 'Error',
+    status_Draft: 'Draft',
+    status_Submitted: 'Submitted',
+    status_OffersReceived: 'Offers Received',
+    status_Compared: 'Compared',
+    status_PendingApproval: 'Pending Approval',
+    status_Approved: 'Approved',
+    status_Rejected: 'Rejected',
+    status_Processing: 'Processing',
+    status_Completed: 'Completed',
+    status_Failed: 'Failed',
+    createReqTitle: 'Create Purchase Request',
+    createReqSub: 'Specify technical requirements, budget allocation, and business justification.',
+    fieldTitle: 'Item / Request Title',
+    fieldTitlePlaceholder: 'e.g., CNC Precision Calibration Sensors',
+    fieldDesc: 'Technical Description',
+    fieldDescPlaceholder: 'Detailed specifications, compliance standards, and operating environment...',
+    fieldQty: 'Quantity',
+    fieldBudget: 'Estimated Budget (USD)',
+    fieldReason: 'Reason for Request',
+    fieldReasonPlaceholder: 'Operational impact, department expansion, or replacement justification...',
+    fieldDeliveryDate: 'Required Delivery Date (Optional)',
+    saveDraft: 'Save as Draft',
+    submitRequest: 'Submit Request',
+    mustBePositive: 'Must be a number greater than zero.',
+    backToRequests: 'Back to Requests',
+    reqInfoSection: 'Request Specifications',
+    requesterLabel: 'Requester',
+    deliveryDateLabel: 'Required Delivery',
+    reasonLabel: 'Business Justification',
+    workflowTimeline: 'Procurement Lifecycle Workflow',
+    supplierOffersSection: 'Supplier Quotations',
+    noOffersYet: 'No supplier quotations uploaded for this request yet.',
+    offerStatus_Reviewed: 'AI Verified',
+    offerStatus_NotReviewed: 'Not Reviewed',
+    editRequest: 'Edit Request',
+    deleteDraft: 'Delete Draft',
+    inviteSuppliers: 'Invite Suppliers',
+    openComparison: 'Compare Offers',
+    sendForApproval: 'Send for Approval',
+    approveRequest: 'Approve Request',
+    rejectRequest: 'Reject Request',
+    recentAuditActivity: 'Request Audit Trail (Latest 10)',
+    reviewWithAi: 'AI Extraction Review',
+    view3d: '3D Interactive',
+    viewClassic: 'Classic 2D',
+    clickStageHint: 'Click any 3D stage node to inspect workflow milestone details',
+    approvalsTitle: 'Executive Approvals',
+    approvalsSub: 'Review benchmarked supplier offers and authorize capital commitments.',
+    recommendedOffer: 'Recommended Supplier',
+    recommendedPrice: 'Recommended Price',
+    submissionDate: 'Submitted',
+    viewDetails: 'View Details',
+    approve: 'Approve',
+    reject: 'Reject',
+    confirmApprovalTitle: 'Confirm Executive Approval',
+    confirmApprovalMsg: 'Are you sure you want to formally approve this purchase request and authorize award?',
+    rejectModalTitle: 'Reject Purchase Request',
+    rejectReasonLabel: 'Mandatory Rejection Reason',
+    rejectReasonPlaceholder: 'Provide audit justification for rejecting this requisition...',
+    cancel: 'Cancel',
+    noPendingApprovals: 'All pending requests have been reviewed.',
+    auditLogTitle: 'System Audit Log',
+    auditLogSub: 'Immutable chronological record of every requisition, quotation, AI edit, and executive decision.',
+    timestamp: 'Timestamp',
+    userCol: 'User',
+    actionCol: 'Action',
+    detailsCol: 'Details & Value Diff',
+    allUsers: 'All Users',
+    allActions: 'All Actions',
+    allRequestsFilter: 'All Requests',
+    supplierPortalTitle: 'Supplier Tender Requests',
+    supplierPortalSub: 'Active invitations assigned to your organization. Submit PDF quotations prior to deadline.',
+    deadlineCol: 'Quotation Deadline',
+    myOfferStatus: 'My Offer Status',
+    offerSubmitted: 'Submitted',
+    offerNotSubmitted: 'Not Submitted',
+    noSupplierRequests: 'No requests have been assigned to you yet.',
+    uploadQuotationTitle: 'Tender Details & Quotation Upload',
+    uploadAreaTitle: 'Drop Supplier Quotation PDF Here',
+    uploadAreaSub: 'Only verified PDF documents (.pdf) are accepted for AI extraction.',
+    browseFiles: 'Browse Files',
+    uploadQuotationBtn: 'Upload Quotation',
+    uploadingText: 'Encrypting & Uploading Quotation PDF...',
+    uploadSuccessMsg: 'Quotation uploaded successfully.',
+    uploadErrorPdfOnly: 'Invalid file format. Only PDF (.pdf) files are accepted.',
+    uploadErrorGeneric: 'Network interruption while uploading document. Please retry.',
+    simulateUploadFail: 'Simulate Upload Error',
+    budgetConfidentialNote: 'Internal budget allocations are confidential and restricted from external vendor view.',
+    inviteModalTitle: 'Invite Registered Suppliers',
+    inviteModalSub: 'Select qualified vendors to receive tender specifications and submit quotations.',
+    selectedCount: 'Selected Suppliers',
+    sendInvitations: 'Send Invitations',
+    selectAtLeastOne: 'Please select at least one supplier before sending invitations.',
+    aiReviewTitle: 'AI Document Intelligence & Review',
+    aiReviewSub: 'Inspect extracted PDF fields, resolve missing values, and verify commercial accuracy.',
+    openQuotationPdf: 'Open Quotation PDF',
+    supplierName: 'Supplier Name',
+    totalPrice: 'Total Price',
+    currency: 'Currency',
+    deliveryDuration: 'Delivery Duration (Days)',
+    paymentTerms: 'Payment Terms',
+    warrantyDuration: 'Warranty Duration (Months)',
+    notes: 'Commercial Notes',
+    saveAndApprove: 'Save & Approve',
+    retryExtraction: 'Retry Extraction',
+    missingFieldWarn: 'Missing value detected — human verification required',
+    simulateAiState: 'AI Engine State:',
+    hoverFieldHint: 'Hover or focus any form field to zoom the 3D inspector onto that document region',
+    comparisonTitle: 'Supplier Offer Comparison',
+    comparisonSub: 'Side-by-side commercial evaluation highlighting lowest cost and fastest lead time.',
+    categoryCol: 'Evaluation Criteria',
+    cheapestBadge: 'Lowest Price',
+    fastestBadge: 'Fastest Delivery',
+    notReviewedBadge: 'Not Reviewed',
+    daysUnit: 'Days',
+    monthsUnit: 'Months',
+    units: 'Units',
+    priorityBalanced: 'Balanced Value',
+    priorityPrice: 'Lowest Price',
+    priorityDelivery: 'Fastest Delivery',
+    priorityWarranty: 'Longest Warranty',
+    clickColumnHint: 'Click any 3D supplier bar or table column to highlight offer'
+  },
+  ar: {
+    brandSubtitle: 'بوابة المشتريات المؤسسية وإدارة الموردين',
+    loginHeroTitle: 'دقة صناعية لإدارة المشتريات وسلاسل الإمداد.',
+    welcomeBack: 'تسجيل الدخول إلى النظام',
+    signInSub: 'أدخل بيانات الاعتماد المؤسسية للوصول إلى مساحة عمل PROCURA.',
+    email: 'البريد الإلكتروني المؤسسي',
+    password: 'كلمة المرور',
+    signIn: 'تسجيل الدخول',
+    signingIn: 'جارٍ التحقق...',
+    demoAccounts: 'الدخول السريع حسب الدور (بيئة عرض تجريبية)',
+    demoNotice: 'بيئة عرض تفاعلية — يمكنك التبديل بين الأدوار في أي وقت لاستعراض كافة الصلاحيات.',
+    requiredField: 'هذا الحقل مطلوب.',
+    invalidCreds: 'بيانات الدخول غير صحيحة. اختر أحد الحسابات التجريبية أو تحقق من البريد.',
+    role_requester: 'مقدّم الطلب',
+    role_officer: 'مسؤول المشتريات',
+    role_manager: 'المدير / المعتمد',
+    role_supplier: 'المورد',
+    navRequests: 'الطلبات',
+    navCreateRequest: 'إنشاء طلب',
+    navApprovals: 'الموافقات',
+    navAuditLog: 'سجل الأحداث',
+    navSupplierRequests: 'طلبات المورد',
+    navAiReview: 'مراجعة استخراج البيانات',
+    navComparison: 'مقارنة عروض الموردين',
+    resetDemo: 'إعادة ضبط البيانات',
+    presentationMode: 'وضع العرض',
+    exitPresentation: 'إنهاء وضع العرض',
+    logOut: 'تسجيل الخروج',
+    requestsTitle: 'طلبات الشراء',
+    requestsSubtitle: 'سجل مركزي لطلبات الشراء، حالة عروض الأسعار، ومسارات الاعتماد.',
+    newRequest: 'طلب جديد',
+    searchPlaceholder: 'البحث بعنوان الطلب أو الرقم المرجعي...',
+    allStatuses: 'جميع الحالات',
+    reqId: 'رقم الطلب',
+    reqTitle: 'عنوان الطلب',
+    quantity: 'الكمية',
+    estBudget: 'الميزانية التقديرية',
+    status: 'الحالة',
+    createdDate: 'تاريخ الإنشاء',
+    noRequests: 'لا توجد طلبات حتى الآن.',
+    loadingData: 'جارٍ تحميل سجلات المشتريات...',
+    errorLoading: 'تعذر تحميل البيانات. يرجى المحاولة مرة أخرى.',
+    retry: 'إعادة المحاولة',
+    simulateStates: 'حالة العرض:',
+    stateNormal: 'نشط',
+    stateLoading: 'تحميل',
+    stateEmpty: 'فارغ',
+    stateError: 'خطأ',
+    status_Draft: 'مسودة',
+    status_Submitted: 'تم الإرسال',
+    status_OffersReceived: 'تم استلام العروض',
+    status_Compared: 'تمت المقارنة',
+    status_PendingApproval: 'بانتظار الموافقة',
+    status_Approved: 'معتمد',
+    status_Rejected: 'مرفوض',
+    status_Processing: 'قيد المعالجة',
+    status_Completed: 'مكتمل',
+    status_Failed: 'فشل الاستخراج',
+    createReqTitle: 'إنشاء طلب شراء جديد',
+    createReqSub: 'حدد المواصفات الفنية، الميزانية التقديرية، ومبررات الشراء.',
+    fieldTitle: 'عنوان الصنف / الطلب',
+    fieldTitlePlaceholder: 'مثال: أجهزة استشعار معايرة دقيقة CNC',
+    fieldDesc: 'الوصف الفني التفصيلي',
+    fieldDescPlaceholder: 'المواصفات الفنية، معايير الجودة، ومتطلبات التشغيل...',
+    fieldQty: 'الكمية',
+    fieldBudget: 'الميزانية التقديرية (دولار)',
+    fieldReason: 'سبب الطلب',
+    fieldReasonPlaceholder: 'الأثر التشغيلي، توسعة القسم، أو مبرر الاستبدال...',
+    fieldDeliveryDate: 'تاريخ التوريد المطلوب (اختياري)',
+    saveDraft: 'حفظ كمسودة',
+    submitRequest: 'إرسال الطلب',
+    mustBePositive: 'يجب إدخال رقم أكبر من الصفر.',
+    backToRequests: 'العودة إلى الطلبات',
+    reqInfoSection: 'مواصفات الطلب',
+    requesterLabel: 'مقدّم الطلب',
+    deliveryDateLabel: 'موعد التسليم المطلوب',
+    reasonLabel: 'مبرر الشراء',
+    workflowTimeline: 'مسار دورة حياة المشتريات',
+    supplierOffersSection: 'عروض أسعار الموردين',
+    noOffersYet: 'لم يتم رفع أي عروض أسعار من الموردين لهذا الطلب بعد.',
+    offerStatus_Reviewed: 'تمت المراجعة الذكية',
+    offerStatus_NotReviewed: 'غير مراجع',
+    editRequest: 'تعديل الطلب',
+    deleteDraft: 'حذف المسودة',
+    inviteSuppliers: 'دعوة موردين',
+    openComparison: 'مقارنة العروض',
+    sendForApproval: 'إرسال للاعتماد',
+    approveRequest: 'اعتماد الطلب',
+    rejectRequest: 'رفض الطلب',
+    recentAuditActivity: 'سجل نشاط الطلب (آخر 10 إجراءات)',
+    reviewWithAi: 'مراجعة استخراج البيانات',
+    view3d: 'عرض 3D تفاعلي',
+    viewClassic: 'عرض تقليدي',
+    clickStageHint: 'اضغط على أي مرحلة في المسار ثلاثي الأبعاد لاستعراض تفاصيلها',
+    approvalsTitle: 'اعتمادات الإدارة التنفيذية',
+    approvalsSub: 'مراجعة عروض الموردين المقارنة واتخاذ قرارات الاعتماد النهائية.',
+    recommendedOffer: 'المورد الموصى به',
+    recommendedPrice: 'السعر الموصى به',
+    submissionDate: 'تاريخ التقديم',
+    viewDetails: 'عرض التفاصيل',
+    approve: 'موافقة',
+    reject: 'رفض',
+    confirmApprovalTitle: 'تأكيد اعتماد طلب الشراء',
+    confirmApprovalMsg: 'هل أنت متأكد من الموافقة الرسمية على هذا الطلب واعتماد الترسية؟',
+    rejectModalTitle: 'رفض طلب الشراء',
+    rejectReasonLabel: 'سبب الرفض الإلزامي',
+    rejectReasonPlaceholder: 'اكتب مبرر الرفض ليتم تسجيله في سجل التدقيق...',
+    cancel: 'إلغاء',
+    noPendingApprovals: 'لا توجد طلبات معلقة بانتظار الموافقة حالياً.',
+    auditLogTitle: 'سجل الأحداث والتدقيق',
+    auditLogSub: 'سجل زمني شفاف وغير قابل للتعديل لجميع عمليات الشراء والتعديلات والاعتمادات.',
+    timestamp: 'التوقيت',
+    userCol: 'المستخدم',
+    actionCol: 'الإجراء',
+    detailsCol: 'التفاصيل والقيم المعدلة',
+    allUsers: 'جميع المستخدمين',
+    allActions: 'جميع الإجراءات',
+    allRequestsFilter: 'جميع الطلبات',
+    supplierPortalTitle: 'طلبات عروض الأسعار الواردة',
+    supplierPortalSub: 'المناقصات والطلبات الموجهة لشركتكم. يرجى رفع عرض السعر بصيغة PDF قبل الموعد النهائي.',
+    deadlineCol: 'الموعد النهائي للتقديم',
+    myOfferStatus: 'حالة عرضي',
+    offerSubmitted: 'تم التقديم',
+    offerNotSubmitted: 'لم يتم التقديم',
+    noSupplierRequests: 'لم يتم إسناد أي طلبات إليك حتى الآن.',
+    uploadQuotationTitle: 'تفاصيل الطلب ورفع عرض السعر',
+    uploadAreaTitle: 'اسحب وأفلت ملف عرض السعر (PDF) هنا',
+    uploadAreaSub: 'يُقبل فقط ملفات PDF المعتمدة ليتم تحليلها واستخراج بياناتها تلقائياً.',
+    browseFiles: 'استعراض الملفات',
+    uploadQuotationBtn: 'رفع عرض السعر',
+    uploadingText: 'جارٍ تشفير ورفع ملف عرض السعر...',
+    uploadSuccessMsg: 'تم رفع عرض السعر بنجاح.',
+    uploadErrorPdfOnly: 'صيغة الملف غير مدعومة. يُسمح بملفات PDF فقط.',
+    uploadErrorGeneric: 'حدث انقطاع أثناء رفع الملف. يرجى المحاولة مجدداً.',
+    simulateUploadFail: 'محاكاة فشل الرفع',
+    budgetConfidentialNote: 'الميزانية التقديرية الداخلية سرية ولا تظهر للموردين الخارجيين.',
+    inviteModalTitle: 'دعوة الموردين المعتمدين',
+    inviteModalSub: 'اختر الموردين المؤهلين لاستلام مواصفات الطلب وتقديم عروض الأسعار.',
+    selectedCount: 'الموردون المختارون',
+    sendInvitations: 'إرسال الدعوات',
+    selectAtLeastOne: 'يرجى اختيار مورد واحد على الأقل لإرسال الدعوة.',
+    aiReviewTitle: 'مراجعة استخراج البيانات بالذكاء الاصطناعي',
+    aiReviewSub: 'تدقيق الحقول المستخرجة من ملف PDF، استكمال البيانات الناقصة، واعتماد العرض للمقارنة.',
+    openQuotationPdf: 'فتح ملف عرض السعر PDF',
+    supplierName: 'اسم المورد',
+    totalPrice: 'السعر الإجمالي',
+    currency: 'العملة',
+    deliveryDuration: 'مدة التوريد (بالأيام)',
+    paymentTerms: 'شروط الدفع',
+    warrantyDuration: 'مدة الضمان (بالأشهر)',
+    notes: 'ملاحظات تجارية',
+    saveAndApprove: 'حفظ واعتماد',
+    retryExtraction: 'إعادة استخراج البيانات',
+    missingFieldWarn: 'حقل ناقص — يرجى الإدخال والمراجعة يدوياً',
+    simulateAiState: 'حالة محرك الذكاء الاصطناعي:',
+    hoverFieldHint: 'مرر المؤشر أو اضغط على أي خانة في الفورم لتكبير موضعها في المستند ثلاثي الأبعاد',
+    comparisonTitle: 'مقارنة عروض الموردين',
+    comparisonSub: 'مقارنة تحليلية شاملة تبرز العرض الأقل سعراً والأسرع توريداً.',
+    categoryCol: 'معيار المقارنة',
+    cheapestBadge: 'أقل سعر',
+    fastestBadge: 'أسرع توريد',
+    notReviewedBadge: 'غير مراجع',
+    daysUnit: 'يوم',
+    monthsUnit: 'شهر',
+    units: 'وحدة',
+    priorityBalanced: 'أفضل قيمة متوازنة',
+    priorityPrice: 'أقل سعر',
+    priorityDelivery: 'أسرع توريد',
+    priorityWarranty: 'أطول ضمان',
+    clickColumnHint: 'اضغط على أي عمود في الشكل ثلاثي الأبعاد أو الجدول لتحديد العرض'
+  }
+};
+
+// ============================================================================
+// 2.5 BACKEND-READY API SERVICE LAYER (SET USE_LIVE_API = true WHEN BACKEND IS LIVE)
+// ============================================================================
+const resolveApiBaseUrl = () => {
+  try {
+    if (typeof window !== 'undefined' && window.__PROCURA_API_URL__) {
+      return window.__PROCURA_API_URL__;
+    }
+    if (typeof process !== 'undefined' && process.env && process.env.VITE_API_BASE_URL) {
+      return process.env.VITE_API_BASE_URL;
+    }
+  } catch {
+    // Ignore environment access issues in sandboxed browsers
+  }
+  return 'https://api.procura.io/v1';
+};
+
+const API_CONFIG = {
+  USE_LIVE_API: false, // Switch to true in Antigravity once your backend endpoints are ready
+  BASE_URL: resolveApiBaseUrl()
+};
+
+const apiRequest = async (endpoint, options = {}) => {
+  const token = localStorage.getItem('procura_jwt_token');
+  const isFormData = options.body instanceof FormData;
+  const headers = {
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {})
+  };
+
+  const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, {
+    ...options,
+    headers
+  });
+
+  if (!response.ok) {
+    const errPayload = await response.json().catch(() => ({}));
+    throw new Error(errPayload.message || `API Error (${response.status})`);
+  }
+  return response.status === 204 ? null : response.json();
+};
+
+const ProcuraApiService = {
+  // POST /auth/login
+  async login(email, password) {
+    if (!API_CONFIG.USE_LIVE_API) {
+      const matched = DEMO_USERS.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+      return { user: matched || null, token: 'demo-jwt-token' };
+    }
+    const data = await apiRequest('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    if (data?.token) localStorage.setItem('procura_jwt_token', data.token);
+    return data;
+  },
+
+  // GET /requests
+  async fetchRequests() {
+    if (!API_CONFIG.USE_LIVE_API) return null; // Uses local state baseline in demo mode
+    return apiRequest('/requests');
+  },
+
+  // POST /requests
+  async createRequest(payload) {
+    if (!API_CONFIG.USE_LIVE_API) return payload;
+    return apiRequest('/requests', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  // PATCH /requests/:id/status
+  async updateRequestStatus(requestId, status, reason = '') {
+    if (!API_CONFIG.USE_LIVE_API) return { id: requestId, status, reason };
+    return apiRequest(`/requests/${requestId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, reason })
+    });
+  },
+
+  // POST /requests/:id/invite
+  async inviteSuppliers(requestId, supplierIds) {
+    if (!API_CONFIG.USE_LIVE_API) return { requestId, supplierIds };
+    return apiRequest(`/requests/${requestId}/invite`, {
+      method: 'POST',
+      body: JSON.stringify({ supplierIds })
+    });
+  },
+
+  // POST /quotations/upload (Multipart FormData for real PDF upload)
+  async uploadQuotationPdf(requestId, supplierId, file) {
+    if (!API_CONFIG.USE_LIVE_API) return null;
+    const formData = new FormData();
+    formData.append('requestId', requestId);
+    formData.append('supplierId', supplierId);
+    formData.append('file', file);
+    return apiRequest('/quotations/upload', {
+      method: 'POST',
+      body: formData
+    });
+  },
+
+  // PUT /quotations/:id/verify (Save & Approve AI Extraction)
+  async verifyAiExtraction(offerId, verifiedFields) {
+    if (!API_CONFIG.USE_LIVE_API) return { id: offerId, ...verifiedFields, reviewed: true };
+    return apiRequest(`/quotations/${offerId}/verify`, {
+      method: 'PUT',
+      body: JSON.stringify(verifiedFields)
+    });
+  },
+
+  // GET /audit-logs
+  async fetchAuditLogs() {
+    if (!API_CONFIG.USE_LIVE_API) return null;
+    return apiRequest('/audit-logs');
+  }
+};
+
+// ============================================================================
+// 3. COHERENT ENTERPRISE MOCK DATA BASELINE
+// ============================================================================
+const DEMO_USERS = [
+  {
+    id: 'USR-01',
+    name: 'Belal Khalil',
+    nameAr: 'بلال خليل',
+    email: 'belal.khalil@procura.io',
+    role: 'requester',
+    department: 'Industrial Operations',
+    departmentAr: 'العمليات الصناعية'
+  },
+  {
+    id: 'USR-02',
+    name: 'Mona Al-Mansoor',
+    nameAr: 'منى المنصور',
+    email: 'mona.officer@procura.io',
+    role: 'officer',
+    department: 'Strategic Procurement',
+    departmentAr: 'المشتريات الاستراتيجية'
+  },
+  {
+    id: 'USR-03',
+    name: 'Youssef El-Masry',
+    nameAr: 'يوسف المصري',
+    email: 'youssef.vp@procura.io',
+    role: 'manager',
+    department: 'Executive Supply Chain',
+    departmentAr: 'الإدارة التنفيذية لسلاسل الإمداد'
+  },
+  {
+    id: 'USR-04',
+    name: 'Tariq Hassan',
+    nameAr: 'طارق حسن',
+    email: 'quotes@techsupply.io',
+    role: 'supplier',
+    supplierId: 'SUP-01',
+    companyName: 'TechSupply Ltd.',
+    companyNameAr: 'شركة تك سبلاي المحدودة'
+  }
+];
+
+const REGISTERED_SUPPLIERS = [
+  {
+    id: 'SUP-01',
+    name: 'TechSupply Ltd.',
+    nameAr: 'تك سبلاي المحدودة',
+    category: 'Enterprise Hardware & Automation',
+    categoryAr: 'الأجهزة المؤسسية والأتمتة',
+    rating: 4.9,
+    location: 'Dubai / Cairo'
+  },
+  {
+    id: 'SUP-02',
+    name: 'Global Traders',
+    nameAr: 'التجار العالميون',
+    category: 'Industrial Logistics & Components',
+    categoryAr: 'المكونات الصناعية والخدمات اللوجستية',
+    rating: 4.6,
+    location: 'Riyadh / Amman'
+  },
+  {
+    id: 'SUP-03',
+    name: 'Prime Solutions',
+    nameAr: 'برايم للحلول الهندسية',
+    category: 'Precision Instrumentation & Systems',
+    categoryAr: 'أنظمة القياس الدقيقة والحلول الهندسية',
+    rating: 4.8,
+    location: 'Abu Dhabi / Suez'
+  }
+];
+
+const INITIAL_REQUESTS = [
+  {
+    id: 'PR-1048',
+    title: 'Enterprise Engineering Workstations (Batch A)',
+    titleAr: 'محطات عمل هندسية عالية الأداء (الدفعة الأولى)',
+    description: '15 high-throughput CAD/BIM mobile workstations with 64GB ECC RAM, NVIDIA RTX Ada GPUs, and 3-year on-site enterprise support.',
+    descriptionAr: 'عدد 15 محطة عمل هندسية متنقلة بذاكرة 64 جيجابايت ومعالجات رسومية احترافية مع دعم فني في الموقع لمدة 3 سنوات.',
+    quantity: 15,
+    estimatedBudget: 28500,
+    reason: 'Q4 R&D CAD simulation cluster expansion.',
+    reasonAr: 'توسعة وحدة المحاكاة الهندسية والبحث والتطوير للربع الرابع.',
+    deliveryDate: '2026-12-15',
+    requesterId: 'USR-01',
+    requesterName: 'Belal Khalil',
+    requesterNameAr: 'بلال خليل',
+    status: 'Compared',
+    createdDate: '2026-11-10',
+    invitedSupplierIds: ['SUP-01', 'SUP-02', 'SUP-03']
+  },
+  {
+    id: 'PR-1047',
+    title: 'Automated Warehouse LiDAR Scanners',
+    titleAr: 'ماسحات LiDAR آلية للمستودعات الذكية',
+    description: '8 industrial-grade 360° optical LiDAR guidance units for autonomous pallet conveyors.',
+    descriptionAr: 'عدد 8 وحدات توجيه ضوئي صناعية بزاوية 360 درجة لناقلات المنصات ذاتية الحركة.',
+    quantity: 8,
+    estimatedBudget: 42000,
+    reason: 'Suez Logistics Hub Bay-4 automation upgrade.',
+    reasonAr: 'تحديث أتمتة الرصيف الرابع في مركز السويس اللوجستي.',
+    deliveryDate: '2026-12-22',
+    requesterId: 'USR-01',
+    requesterName: 'Belal Khalil',
+    requesterNameAr: 'بلال خليل',
+    status: 'PendingApproval',
+    createdDate: '2026-11-08',
+    invitedSupplierIds: ['SUP-01', 'SUP-02', 'SUP-03']
+  },
+  {
+    id: 'PR-1049',
+    title: 'Industrial PLC Control Cabinets',
+    titleAr: 'لوحات تحكم صناعية مبرمجة PLC',
+    description: '4 IP66-rated stainless steel PLC control enclosures with redundant power supplies.',
+    descriptionAr: 'عدد 4 خزائن تحكم صناعية مقاومة للعوامل الجوية بمعيار IP66 مع وحدات طاقة احتياطية.',
+    quantity: 4,
+    estimatedBudget: 34000,
+    reason: 'Assembly Line 2 redundancy compliance.',
+    reasonAr: 'تطبيق معايير الاعتمادية الاحتياطية لخط التجميع الثاني.',
+    deliveryDate: '2027-01-10',
+    requesterId: 'USR-01',
+    requesterName: 'Belal Khalil',
+    requesterNameAr: 'بلال خليل',
+    status: 'Submitted',
+    createdDate: '2026-11-14',
+    invitedSupplierIds: ['SUP-01']
+  },
+  {
+    id: 'PR-1050',
+    title: 'Cleanroom HEPA Filtration Modules',
+    titleAr: 'وحدات ترشيح الهواء فائقة النقاء HEPA',
+    description: '20 modular H14 ceiling laminar flow filter units for precision assembly zone.',
+    descriptionAr: 'عدد 20 وحدة فلترة تدفق صفائحي معيار H14 لمنطقة التجميع الدقيق.',
+    quantity: 20,
+    estimatedBudget: 19000,
+    reason: 'Annual ISO Class 5 certification renewal.',
+    reasonAr: 'التجديد السنوي لشهادة الأيزو الفئة الخامسة للغرف النظيفة.',
+    deliveryDate: '2027-01-25',
+    requesterId: 'USR-01',
+    requesterName: 'Belal Khalil',
+    requesterNameAr: 'بلال خليل',
+    status: 'Draft',
+    createdDate: '2026-11-16',
+    invitedSupplierIds: []
+  },
+  {
+    id: 'PR-1044',
+    title: 'Fiber Optic Backbone Switches (100GbE)',
+    titleAr: 'مبدلات شبكة الألياف الضوئية الأساسية 100GbE',
+    description: '6 core spine-leaf data center switches with dual hot-swappable PSUs.',
+    descriptionAr: 'عدد 6 مبدلات مراكز بيانات رئيسية مزودة بوحدات طاقة مزدوجة قابلة للتبديل السريع.',
+    quantity: 6,
+    estimatedBudget: 54000,
+    reason: 'Core telemetry network low-latency upgrade.',
+    reasonAr: 'ترقية شبكة القياس عن بُعد الأساسية لتقليل زمن الاستجابة.',
+    deliveryDate: '2026-12-01',
+    requesterId: 'USR-01',
+    requesterName: 'Belal Khalil',
+    requesterNameAr: 'بلال خليل',
+    status: 'Approved',
+    createdDate: '2026-11-01',
+    invitedSupplierIds: ['SUP-01', 'SUP-03']
+  }
+];
+
+const INITIAL_OFFERS = [
+  {
+    id: 'OFF-201',
+    requestId: 'PR-1048',
+    supplierId: 'SUP-01',
+    supplierName: 'TechSupply Ltd.',
+    fileName: 'TechSupply_Quotation_PR1048.pdf',
+    uploadedAt: '2026-11-12 10:14',
+    extractionStatus: 'Completed',
+    reviewed: true,
+    totalPrice: 25800,
+    currency: 'USD',
+    deliveryDays: 7,
+    paymentTerms: 'Net 30',
+    warrantyMonths: 36,
+    notes: 'Includes priority air freight and pre-imaged enterprise OS.'
+  },
+  {
+    id: 'OFF-202',
+    requestId: 'PR-1048',
+    supplierId: 'SUP-02',
+    supplierName: 'Global Traders',
+    fileName: 'GlobalTraders_Offer_PR1048.pdf',
+    uploadedAt: '2026-11-12 14:40',
+    extractionStatus: 'Completed',
+    reviewed: true,
+    totalPrice: 24900,
+    currency: 'USD',
+    deliveryDays: 12,
+    paymentTerms: 'Net 30',
+    warrantyMonths: 24,
+    notes: 'Standard sea/air consolidated shipping.'
+  },
+  {
+    id: 'OFF-203',
+    requestId: 'PR-1048',
+    supplierId: 'SUP-03',
+    supplierName: 'Prime Solutions',
+    fileName: 'PrimeSolutions_Bid_PR1048.pdf',
+    uploadedAt: '2026-11-13 09:05',
+    extractionStatus: 'Completed',
+    reviewed: false,
+    totalPrice: 26700,
+    currency: 'USD',
+    deliveryDays: 5,
+    paymentTerms: '',
+    warrantyMonths: 36,
+    notes: 'Express courier dispatch from regional hub.'
+  },
+  {
+    id: 'OFF-204',
+    requestId: 'PR-1047',
+    supplierId: 'SUP-01',
+    supplierName: 'TechSupply Ltd.',
+    fileName: 'TechSupply_LiDAR_PR1047.pdf',
+    uploadedAt: '2026-11-11 11:20',
+    extractionStatus: 'Completed',
+    reviewed: true,
+    totalPrice: 38900,
+    currency: 'USD',
+    deliveryDays: 9,
+    paymentTerms: 'Net 45',
+    warrantyMonths: 24,
+    notes: 'Includes factory calibration certificates.'
+  },
+  {
+    id: 'OFF-205',
+    requestId: 'PR-1047',
+    supplierId: 'SUP-03',
+    supplierName: 'Prime Solutions',
+    fileName: 'Prime_LiDAR_Proposal_1047.pdf',
+    uploadedAt: '2026-11-11 16:45',
+    extractionStatus: 'Completed',
+    reviewed: true,
+    totalPrice: 37400,
+    currency: 'USD',
+    deliveryDays: 11,
+    paymentTerms: 'Net 30',
+    warrantyMonths: 36,
+    notes: 'Recommended lowest TCO with 3-year coverage.'
+  }
+];
+
+const INITIAL_AUDIT_LOG = [
+  {
+    id: 'AUD-9006',
+    timestamp: '2026-11-14 09:30:12',
+    user: 'Belal Khalil',
+    userAr: 'بلال خليل',
+    action: 'Submitted Request',
+    actionAr: 'إرسال طلب شراء',
+    requestId: 'PR-1049',
+    details: 'Status changed from Draft -> Submitted',
+    detailsAr: 'تم تغيير الحالة من مسودة -> تم الإرسال'
+  },
+  {
+    id: 'AUD-9005',
+    timestamp: '2026-11-13 15:18:44',
+    user: 'Mona Al-Mansoor',
+    userAr: 'منى المنصور',
+    action: 'Verified AI Extraction',
+    actionAr: 'اعتماد استخراج البيانات',
+    requestId: 'PR-1048',
+    details: 'Verified TechSupply Ltd. offer ($25,800, 7 days)',
+    detailsAr: 'تمت مراجعة واعتماد عرض تك سبلاي ($25,800، 7 أيام)'
+  },
+  {
+    id: 'AUD-9004',
+    timestamp: '2026-11-12 16:02:19',
+    user: 'Mona Al-Mansoor',
+    userAr: 'منى المنصور',
+    action: 'Sent for Approval',
+    actionAr: 'إرسال للاعتماد',
+    requestId: 'PR-1047',
+    details: 'Status changed from Compared -> Pending Approval',
+    detailsAr: 'تم تغيير الحالة من تمت المقارنة -> بانتظار الموافقة'
+  },
+  {
+    id: 'AUD-9003',
+    timestamp: '2026-11-11 10:05:00',
+    user: 'Mona Al-Mansoor',
+    userAr: 'منى المنصور',
+    action: 'Invited Suppliers',
+    actionAr: 'دعوة موردين',
+    requestId: 'PR-1048',
+    details: 'Invited 3 suppliers: TechSupply Ltd., Global Traders, Prime Solutions',
+    detailsAr: 'تمت دعوة 3 موردين: تك سبلاي، التجار العالميون، برايم للحلول'
+  },
+  {
+    id: 'AUD-9002',
+    timestamp: '2026-11-05 14:22:10',
+    user: 'Youssef El-Masry',
+    userAr: 'يوسف المصري',
+    action: 'Approved Request',
+    actionAr: 'اعتماد الطلب',
+    requestId: 'PR-1044',
+    details: 'Approved award to TechSupply Ltd. ($51,200)',
+    detailsAr: 'تمت الموافقة على الترسية لصالح شركة تك سبلاي ($51,200)'
+  }
+];
+
+// ============================================================================
+// 4. GENUINE INTERACTIVE & USABLE THREE.JS / WEBGL SCENES
+// ============================================================================
+
+/**
+ * USABLE 3D EXPERIENCE A — SCREEN 04: 3D WORKFLOW & SUPPLY CHAIN STAGE TRACKER
+ */
+const WorkflowStageThreeScene = ({ theme, stages, currentStageIdx, selectedStageIdx, onSelectStage }) => {
+  const mountRef = useRef(null);
+  const selectedRef = useRef(selectedStageIdx);
+  selectedRef.current = selectedStageIdx;
+
+  useEffect(() => {
+    const container = mountRef.current;
+    if (!container) return;
+    let animationFrameId;
+    let renderer;
+
+    try {
+      const width = container.clientWidth || 720;
+      const height = container.clientHeight || 220;
+      const isDark = theme === 'dark';
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 60);
+      camera.position.set(0, 2.3, 7.6);
+      camera.lookAt(0, 0, 0);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      scene.add(new THREE.AmbientLight(0xffffff, isDark ? 1.15 : 1.75));
+      const keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
+      keyLight.position.set(4, 7, 6);
+      scene.add(keyLight);
+
+      const group = new THREE.Group();
+      scene.add(group);
+
+      const spacing = 2.1;
+      const startX = -((stages.length - 1) * spacing) / 2;
+      const nodeMeshes = [];
+
+      const trackGeo = new THREE.BoxGeometry((stages.length - 1) * spacing, 0.08, 0.16);
+      const trackMat = new THREE.MeshStandardMaterial({
+        color: isDark ? 0x262b38 : 0xcbd5e1,
+        metalness: 0.6,
+        roughness: 0.3
+      });
+      const track = new THREE.Mesh(trackGeo, trackMat);
+      track.position.y = -0.05;
+      group.add(track);
+
+      const completedRatio = Math.max(0.02, currentStageIdx / Math.max(1, stages.length - 1));
+      const progWidth = (stages.length - 1) * spacing * completedRatio;
+      const progGeo = new THREE.BoxGeometry(progWidth, 0.1, 0.18);
+      const progMat = new THREE.MeshStandardMaterial({
+        color: 0x10b981,
+        emissive: 0x10b981,
+        emissiveIntensity: 0.45
+      });
+      const progBeam = new THREE.Mesh(progGeo, progMat);
+      progBeam.position.set(startX + progWidth / 2, -0.04, 0.01);
+      group.add(progBeam);
+
+      stages.forEach((st, idx) => {
+        const isCurrent = idx === currentStageIdx;
+        const isCompleted = idx <= currentStageIdx;
+        const isRejected = st === 'Rejected' && isCurrent;
+
+        const baseColor = isRejected
+          ? 0xe32236
+          : isCurrent
+          ? 0xe32236
+          : isCompleted
+          ? 0x10b981
+          : isDark
+          ? 0x2a303f
+          : 0x94a3b8;
+
+        const mat = new THREE.MeshStandardMaterial({
+          color: baseColor,
+          emissive: isCurrent || isCompleted ? baseColor : 0x000000,
+          emissiveIntensity: isCurrent ? 0.55 : isCompleted ? 0.25 : 0,
+          metalness: 0.45,
+          roughness: 0.25
+        });
+
+        const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.54, 0.28, 32), mat);
+        pedestal.position.set(startX + idx * spacing, 0, 0);
+        pedestal.userData = { stageIndex: idx };
+        group.add(pedestal);
+        nodeMeshes.push(pedestal);
+
+        const core = new THREE.Mesh(
+          isCurrent ? new THREE.OctahedronGeometry(0.24, 0) : new THREE.CylinderGeometry(0.18, 0.18, 0.18, 24),
+          mat
+        );
+        core.position.set(startX + idx * spacing, 0.42, 0);
+        core.userData = { stageIndex: idx };
+        group.add(core);
+        nodeMeshes.push(core);
+      });
+
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+
+      const handleClick = (e) => {
+        const rect = container.getBoundingClientRect();
+        pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        const hits = raycaster.intersectObjects(nodeMeshes, false);
+        if (hits.length > 0 && typeof hits[0].object.userData.stageIndex === 'number') {
+          onSelectStage(hits[0].object.userData.stageIndex);
+        }
+      };
+      container.addEventListener('click', handleClick);
+
+      const handleResize = () => {
+        if (!container) return;
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+      };
+      window.addEventListener('resize', handleResize);
+
+      const clock = new THREE.Clock();
+      const animate = () => {
+        animationFrameId = requestAnimationFrame(animate);
+        const t = clock.getElapsedTime();
+
+        const targetX = (startX + selectedRef.current * spacing) * 0.45;
+        camera.position.x += (targetX - camera.position.x) * 0.08;
+        camera.lookAt(targetX * 0.6, 0.1, 0);
+
+        nodeMeshes.forEach((m) => {
+          if (m.geometry.type === 'OctahedronGeometry') {
+            m.rotation.y = t * 1.4;
+            m.position.y = 0.44 + Math.sin(t * 2.5) * 0.05;
+          }
+        });
+
+        renderer.render(scene, camera);
+      };
+      animate();
+
+      return () => {
+        cancelAnimationFrame(animationFrameId);
+        container.removeEventListener('click', handleClick);
+        window.removeEventListener('resize', handleResize);
+        if (renderer?.domElement && container.contains(renderer.domElement)) {
+          container.removeChild(renderer.domElement);
+        }
+        renderer.dispose();
+      };
+    } catch (e) {
+      console.warn(e);
+    }
+  }, [theme, stages, currentStageIdx, onSelectStage]);
+
+  return <div ref={mountRef} className="w-full h-[220px] cursor-pointer" />;
+};
+
+/**
+ * USABLE 3D EXPERIENCE B — SCREEN 10: INTERACTIVE 3D DOCUMENT INSPECTOR
+ * Hovering or focusing any field smoothly zooms the camera onto that document zone.
+ */
+const AiExtractionThreeScene = ({ theme, extractionStatus, hasMissingField, activeField }) => {
+  const mountRef = useRef(null);
+  const activeFieldRef = useRef(activeField);
+  activeFieldRef.current = activeField;
+
+  useEffect(() => {
+    const container = mountRef.current;
+    if (!container) return;
+    let animationFrameId;
+    let renderer;
+
+    try {
+      const width = container.clientWidth || 500;
+      const height = container.clientHeight || 320;
+      const isDark = theme === 'dark';
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 60);
+      camera.position.set(0, 0.1, 5.4);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      scene.add(new THREE.AmbientLight(0xffffff, isDark ? 1.2 : 1.75));
+      const keyLight = new THREE.DirectionalLight(0xffffff, 1.3);
+      keyLight.position.set(3, 5, 6);
+      scene.add(keyLight);
+
+      const group = new THREE.Group();
+      scene.add(group);
+
+      const sheetGeo = new THREE.BoxGeometry(2.5, 3.25, 0.04);
+      const sheetMat = new THREE.MeshStandardMaterial({
+        color: isDark ? 0x1e222d : 0xffffff,
+        roughness: 0.25,
+        metalness: 0.1
+      });
+      const sheet = new THREE.Mesh(sheetGeo, sheetMat);
+      group.add(sheet);
+
+      const headerBar = new THREE.Mesh(
+        new THREE.BoxGeometry(2.2, 0.24, 0.055),
+        new THREE.MeshBasicMaterial({ color: 0xe32236 })
+      );
+      headerBar.position.set(0, 1.32, 0.01);
+      group.add(headerBar);
+
+      const fieldRegions = [
+        { key: 'supplierName', y: 0.85, w: 2.0, h: 0.34, missing: false },
+        { key: 'totalPrice', y: 0.32, w: 2.0, h: 0.38, missing: false },
+        { key: 'deliveryDays', y: -0.22, w: 2.0, h: 0.34, missing: false },
+        { key: 'warrantyMonths', y: -0.74, w: 2.0, h: 0.34, missing: false },
+        { key: 'paymentTerms', y: -1.24, w: 2.0, h: 0.34, missing: hasMissingField }
+      ];
+
+      const highlightMeshes = {};
+      fieldRegions.forEach((reg) => {
+        const isWarn = reg.missing;
+        const mat = new THREE.MeshBasicMaterial({
+          color: isWarn ? 0xf59e0b : 0x64748b,
+          transparent: true,
+          opacity: isWarn ? 0.42 : 0.18
+        });
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(reg.w, reg.h, 0.06), mat);
+        mesh.position.set(0, reg.y, 0.02);
+        mesh.userData = { y: reg.y, isWarn };
+        group.add(mesh);
+        highlightMeshes[reg.key] = mesh;
+      });
+
+      const scanBeam = new THREE.Mesh(
+        new THREE.BoxGeometry(2.7, 0.035, 0.14),
+        new THREE.MeshBasicMaterial({ color: 0xe32236, transparent: true, opacity: 0.85 })
+      );
+      scanBeam.position.z = 0.09;
+      group.add(scanBeam);
+
+      const handleResize = () => {
+        if (!container) return;
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+      };
+      window.addEventListener('resize', handleResize);
+
+      const clock = new THREE.Clock();
+      const animate = () => {
+        animationFrameId = requestAnimationFrame(animate);
+        const t = clock.getElapsedTime();
+
+        const focusedKey = activeFieldRef.current;
+        const focusedMesh = focusedKey ? highlightMeshes[focusedKey] : null;
+
+        const targetCamY = focusedMesh ? focusedMesh.userData.y * 0.65 : 0;
+        const targetCamZ = focusedMesh ? 3.85 : 5.4;
+        camera.position.y += (targetCamY - camera.position.y) * 0.1;
+        camera.position.z += (targetCamZ - camera.position.z) * 0.1;
+        camera.lookAt(0, targetCamY * 0.8, 0);
+
+        group.rotation.y = Math.sin(t * 0.4) * 0.07;
+
+        Object.entries(highlightMeshes).forEach(([k, mesh]) => {
+          const isFocused = k === focusedKey;
+          mesh.material.color.setHex(
+            isFocused ? 0xe32236 : mesh.userData.isWarn ? 0xf59e0b : 0x64748b
+          );
+          mesh.material.opacity = isFocused ? 0.55 : mesh.userData.isWarn ? 0.42 : 0.18;
+        });
+
+        if (extractionStatus === 'Processing') {
+          scanBeam.visible = true;
+          scanBeam.position.y = Math.sin(t * 3.2) * 1.45;
+        } else {
+          scanBeam.visible = false;
+        }
+
+        renderer.render(scene, camera);
+      };
+      animate();
+
+      return () => {
+        cancelAnimationFrame(animationFrameId);
+        window.removeEventListener('resize', handleResize);
+        if (renderer?.domElement && container.contains(renderer.domElement)) {
+          container.removeChild(renderer.domElement);
+        }
+        renderer.dispose();
+      };
+    } catch (e) {
+      console.warn(e);
+    }
+  }, [theme, extractionStatus, hasMissingField]);
+
+  return <div ref={mountRef} className="w-full h-[320px]" />;
+};
+
+/**
+ * USABLE 3D EXPERIENCE C — SCREEN 11: INTERACTIVE 3D SUPPLIER DECISION MATRIX
+ */
+const ComparisonThreeScene = ({ theme, offers, priority, selectedOfferId, onSelectOffer }) => {
+  const mountRef = useRef(null);
+  const selectedRef = useRef(selectedOfferId);
+  selectedRef.current = selectedOfferId;
+
+  useEffect(() => {
+    const container = mountRef.current;
+    if (!container || !offers.length) return;
+    let animationFrameId;
+    let renderer;
+
+    try {
+      const width = container.clientWidth || 640;
+      const height = container.clientHeight || 220;
+      const isDark = theme === 'dark';
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 60);
+      camera.position.set(0, 2.2, 6.8);
+      camera.lookAt(0, 0.4, 0);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      scene.add(new THREE.AmbientLight(0xffffff, isDark ? 1.2 : 1.75));
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
+      dirLight.position.set(4, 7, 5);
+      scene.add(dirLight);
+
+      const group = new THREE.Group();
+      scene.add(group);
+
+      const prices = offers.map((o) => o.totalPrice || 1);
+      const minPrice = Math.min(...prices);
+      const maxPrice = Math.max(...prices);
+
+      const days = offers.map((o) => o.deliveryDays || 1);
+      const minDays = Math.min(...days);
+      const maxDays = Math.max(...days);
+
+      const warranties = offers.map((o) => o.warrantyMonths || 12);
+      const maxWarranty = Math.max(...warranties);
+
+      const scores = offers.map((o) => {
+        const priceScore = maxPrice === minPrice ? 1 : 1 - (o.totalPrice - minPrice) / (maxPrice - minPrice + 1);
+        const speedScore = maxDays === minDays ? 1 : 1 - (o.deliveryDays - minDays) / (maxDays - minDays + 1);
+        const warrantyScore = (o.warrantyMonths || 12) / (maxWarranty || 36);
+        if (priority === 'price') return 0.35 + priceScore * 0.65;
+        if (priority === 'delivery') return 0.35 + speedScore * 0.65;
+        if (priority === 'warranty') return 0.35 + warrantyScore * 0.65;
+        return 0.35 + (priceScore * 0.45 + speedScore * 0.35 + warrantyScore * 0.2) * 0.65;
+      });
+      const topScore = Math.max(...scores);
+
+      const spacing = 2.0;
+      const startX = -((offers.length - 1) * spacing) / 2;
+      const barMeshes = [];
+
+      offers.forEach((offer, idx) => {
+        const isBest = Math.abs(scores[idx] - topScore) < 0.001;
+        const barHeight = 0.5 + scores[idx] * 1.65;
+
+        const mat = new THREE.MeshStandardMaterial({
+          color: isBest ? 0x10b981 : isDark ? 0x3b4254 : 0x94a3b8,
+          emissive: isBest ? 0x10b981 : 0x000000,
+          emissiveIntensity: isBest ? 0.35 : 0,
+          roughness: 0.25,
+          metalness: 0.45
+        });
+
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(0.85, barHeight, 0.85), mat);
+        bar.position.set(startX + idx * spacing, barHeight / 2 - 0.5, 0);
+        bar.userData = { offerId: offer.id, isBest };
+        group.add(bar);
+        barMeshes.push(bar);
+      });
+
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+      const handleClick = (e) => {
+        const rect = container.getBoundingClientRect();
+        pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        const hits = raycaster.intersectObjects(barMeshes, false);
+        if (hits.length > 0 && hits[0].object.userData.offerId) {
+          onSelectOffer(hits[0].object.userData.offerId);
+        }
+      };
+      container.addEventListener('click', handleClick);
+
+      const handleResize = () => {
+        if (!container) return;
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+      };
+      window.addEventListener('resize', handleResize);
+
+      const animate = () => {
+        animationFrameId = requestAnimationFrame(animate);
+        barMeshes.forEach((b) => {
+          const isSelected = b.userData.offerId === selectedRef.current;
+          const col = isSelected ? 0xe32236 : b.userData.isBest ? 0x10b981 : isDark ? 0x3b4254 : 0x94a3b8;
+          b.material.color.setHex(col);
+          b.material.emissive.setHex(isSelected ? 0xe32236 : b.userData.isBest ? 0x10b981 : 0x000000);
+          b.material.emissiveIntensity = isSelected ? 0.55 : b.userData.isBest ? 0.35 : 0;
+        });
+        renderer.render(scene, camera);
+      };
+      animate();
+
+      return () => {
+        cancelAnimationFrame(animationFrameId);
+        container.removeEventListener('click', handleClick);
+        window.removeEventListener('resize', handleResize);
+        if (renderer?.domElement && container.contains(renderer.domElement)) {
+          container.removeChild(renderer.domElement);
+        }
+        renderer.dispose();
+      };
+    } catch (e) {
+      console.warn(e);
+    }
+  }, [theme, offers, priority, onSelectOffer]);
+
+  return <div ref={mountRef} className="w-full h-[220px] cursor-pointer" />;
+};
+
+/**
+ * USABLE 3D EXPERIENCE 01 — SCREEN 01: INTERACTIVE 3D ROLE CREDENTIAL PAPERS
+ * Floating 3D credential sheets representing each login role. Clicking any paper
+ * smoothly zooms in with a crimson calibration frame & scanline effect, and typing
+ * updates both the 3D paper texture and the main Sign In widget in real time.
+ */
+const LoginRolePapersThreeScene = ({
+  theme,
+  lang,
+  users,
+  selectedRole,
+  onSelectRole,
+  liveEmail,
+  livePassword,
+  showPwd
+}) => {
+  const mountRef = useRef(null);
+  const selectedRoleRef = useRef(selectedRole);
+  selectedRoleRef.current = selectedRole;
+
+  const texturesRef = useRef({});
+  const canvasesRef = useRef({});
+
+  // Helper to trace a rounded rectangle path on 2D canvas
+  const roundRectPath = (ctx, x, y, w, h, r) => {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  };
+
+  // Render an executive brushed-titanium & carbon security credential card texture
+  const drawPaperTexture = useCallback((canvas, user, isSelected, emailVal, pwdVal, revealPwd, currentTheme, currentLang) => {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const isDark = currentTheme === 'dark';
+    const isAr = currentLang === 'ar';
+    const w = canvas.width;
+    const h = canvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Rounded executive card silhouette
+    roundRectPath(ctx, 4, 4, w - 8, h - 8, 28);
+    ctx.save();
+    ctx.clip();
+
+    // Rich multi-stop brushed anodized surface
+    const baseGrad = ctx.createLinearGradient(0, 0, w, h);
+    if (isDark) {
+      baseGrad.addColorStop(0, '#222736');
+      baseGrad.addColorStop(0.45, '#141822');
+      baseGrad.addColorStop(1, '#0B0D13');
+    } else {
+      baseGrad.addColorStop(0, '#FFFFFF');
+      baseGrad.addColorStop(0.5, '#F4F6FA');
+      baseGrad.addColorStop(1, '#E6EAF2');
+    }
+    ctx.fillStyle = baseGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Diagonal studio light reflection sweep across top-right
+    const sheenGrad = ctx.createLinearGradient(0, 0, w * 0.85, h * 0.65);
+    sheenGrad.addColorStop(0, isSelected ? 'rgba(227, 34, 54, 0.16)' : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.85)'));
+    sheenGrad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = sheenGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Subtle micro-dot security guilloche pattern
+    ctx.fillStyle = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.045)';
+    for (let dx = 28; dx < w - 20; dx += 18) {
+      for (let dy = 28; dy < h - 20; dy += 18) {
+        ctx.beginPath();
+        ctx.arc(dx, dy, 1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Top crimson executive header bar
+    const headerGrad = ctx.createLinearGradient(0, 0, w, 0);
+    headerGrad.addColorStop(0, '#E32236');
+    headerGrad.addColorStop(0.65, '#9E1422');
+    headerGrad.addColorStop(1, isDark ? '#191C24' : '#252932');
+    ctx.fillStyle = headerGrad;
+    ctx.fillRect(0, 0, w, 62);
+
+    // PROCURA geometric emblem inside header
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '800 17px "Inter", sans-serif';
+    ctx.fillText('PROCURA', 32, 38);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.font = '600 11px "JetBrains Mono", monospace';
+    const clearanceMap = {
+      requester: 'CLEARANCE // LVL-01',
+      officer: 'CLEARANCE // LVL-03',
+      manager: 'EXECUTIVE // LVL-04',
+      supplier: 'VENDOR // EXT-02'
+    };
+    ctx.fillText(clearanceMap[user.role] || 'LVL-01', w - 185, 37);
+
+    // Clean Crimson Vertical Accent Bar + Role Title & Identity (No Credit-Card Chip)
+    ctx.fillStyle = '#E32236';
+    roundRectPath(ctx, 34, 82, 6, 74, 3);
+    ctx.fill();
+
+    const roleLabels = {
+      en: {
+        requester: 'REQUESTER',
+        officer: 'PROCUREMENT OFFICER',
+        manager: 'APPROVER / MANAGER',
+        supplier: 'SUPPLIER PORTAL'
+      },
+      ar: {
+        requester: 'مقدّم الطلب',
+        officer: 'مسؤول المشتريات',
+        manager: 'المدير المعتمد',
+        supplier: 'بوابة المورد'
+      }
+    };
+    ctx.fillStyle = isDark ? '#F8FAFC' : '#0F172A';
+    ctx.font = '800 25px "Inter", "IBM Plex Sans Arabic", sans-serif';
+    ctx.fillText(roleLabels[currentLang][user.role] || user.role.toUpperCase(), 54, 106);
+
+    ctx.fillStyle = isDark ? '#CBD5E1' : '#334155';
+    ctx.font = '600 15px "Inter", "IBM Plex Sans Arabic", sans-serif';
+    const personLabel = isAr ? (user.companyNameAr || user.nameAr) : (user.companyName || user.name);
+    ctx.fillText(personLabel, 54, 131);
+
+    // Department Tag
+    ctx.fillStyle = '#E32236';
+    ctx.font = '700 11px "JetBrains Mono", monospace';
+    const deptLabel = isAr ? (user.departmentAr || 'شبكة الموردين') : (user.department || 'External Vendor Network');
+    ctx.fillText(deptLabel.toUpperCase(), 54, 153);
+
+    // Rounded Live-Editable Email Pill
+    roundRectPath(ctx, 32, 176, w - 64, 74, 14);
+    ctx.fillStyle = isDark ? 'rgba(9, 11, 16, 0.85)' : 'rgba(255, 255, 255, 0.92)';
+    ctx.fill();
+    ctx.strokeStyle = isSelected ? '#E32236' : (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.12)');
+    ctx.lineWidth = isSelected ? 2.2 : 1.2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#E32236';
+    ctx.font = '700 10px "JetBrains Mono", monospace';
+    ctx.fillText(isAr ? 'IDENTITY // البريد الإلكتروني' : 'ENTERPRISE IDENTITY', 48, 198);
+
+    const displayEmail = isSelected ? (emailVal || 'type email...') : user.email;
+    ctx.fillStyle = isDark ? '#F2F3F5' : '#0F172A';
+    ctx.font = '600 17px "JetBrains Mono", monospace';
+    ctx.fillText(displayEmail.slice(0, 32) + (isSelected ? '|' : ''), 48, 229);
+
+    // Rounded Live-Editable Password Pill
+    roundRectPath(ctx, 32, 266, w - 64, 74, 14);
+    ctx.fillStyle = isDark ? 'rgba(9, 11, 16, 0.85)' : 'rgba(255, 255, 255, 0.92)';
+    ctx.fill();
+    ctx.strokeStyle = isSelected ? '#E32236' : (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.12)');
+    ctx.lineWidth = isSelected ? 2.2 : 1.2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#E32236';
+    ctx.font = '700 10px "JetBrains Mono", monospace';
+    ctx.fillText(isAr ? 'PASSKEY // كلمة المرور' : 'ACCESS PASSKEY', 48, 288);
+
+    const rawPwd = isSelected ? (pwdVal || '') : '••••••••••••';
+    const hasPwd = rawPwd.length > 0;
+    const maskedPwd = hasPwd
+      ? (revealPwd ? rawPwd : '•'.repeat(rawPwd.length))
+      : (isAr ? 'أدخل كلمة المرور...' : 'type password...');
+    ctx.fillStyle = hasPwd
+      ? (isDark ? '#F2F3F5' : '#0F172A')
+      : (isDark ? '#64748B' : '#94A3B8');
+    ctx.font = '600 17px "JetBrains Mono", monospace';
+    ctx.fillText(maskedPwd.slice(0, 28), 48, 319);
+
+    // Bottom Status Footer Bar
+    roundRectPath(ctx, 32, 362, w - 64, 52, 12);
+    ctx.fillStyle = isSelected ? 'rgba(227, 34, 54, 0.16)' : (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.05)');
+    ctx.fill();
+    ctx.fillStyle = isSelected ? '#E32236' : (isDark ? '#94A3B8' : '#475569');
+    ctx.font = '700 12px "JetBrains Mono", monospace';
+    const statusFooter = isSelected
+      ? (isAr ? '● البطاقة نشطة — اكتب مباشرة أو من اللوحة الجانبية' : '● PASS ACTIVE — SYNCED WITH SIGN-IN DRAWER')
+      : (isAr ? 'اضغط لاختيار البطاقة وفتح لوحة الدخول' : 'CLICK CARD TO DEPLOY SIGN-IN PANEL →');
+    ctx.fillText(statusFooter, 48, 393);
+
+    ctx.restore();
+
+    // Outer precision metallic bezel stroke
+    roundRectPath(ctx, 4, 4, w - 8, h - 8, 28);
+    ctx.strokeStyle = isSelected ? '#E32236' : (isDark ? 'rgba(255,255,255,0.18)' : 'rgba(15,23,42,0.16)');
+    ctx.lineWidth = isSelected ? 4 : 2;
+    ctx.stroke();
+  }, []);
+
+  // Re-paint textures live whenever typed email, password, theme, language, or selectedRole changes
+  useEffect(() => {
+    users.forEach((u) => {
+      const canvas = canvasesRef.current[u.role];
+      const tex = texturesRef.current[u.role];
+      if (canvas && tex) {
+        drawPaperTexture(
+          canvas,
+          u,
+          selectedRole === u.role,
+          liveEmail,
+          livePassword,
+          showPwd,
+          theme,
+          lang
+        );
+        tex.needsUpdate = true;
+      }
+    });
+  }, [users, selectedRole, liveEmail, livePassword, showPwd, theme, lang, drawPaperTexture]);
+
+  useEffect(() => {
+    const container = mountRef.current;
+    if (!container) return;
+    let animationFrameId;
+    let renderer;
+
+    try {
+      const width = container.clientWidth || 640;
+      const height = container.clientHeight || 430;
+      const isDark = theme === 'dark';
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 60);
+      camera.position.set(0, 0.15, 7.2);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      // Studio rim + key lighting for metallic card sheen
+      scene.add(new THREE.AmbientLight(0xffffff, isDark ? 1.4 : 1.75));
+      const keyLight = new THREE.DirectionalLight(0xffffff, 1.3);
+      keyLight.position.set(3, 5, 7);
+      scene.add(keyLight);
+
+      const rimLight = new THREE.DirectionalLight(0xe32236, 0.55);
+      rimLight.position.set(-4, -2, 4);
+      scene.add(rimLight);
+
+      const group = new THREE.Group();
+      scene.add(group);
+
+      // Clean architectural floor grid plane
+      const gridHelper = new THREE.GridHelper(
+        14,
+        18,
+        isDark ? 0x2a2f3d : 0xd1d5db,
+        isDark ? 0x171b24 : 0xe5e7eb
+      );
+      gridHelper.position.y = -2.05;
+      scene.add(gridHelper);
+
+      const clickableMeshes = [];
+      const paperNodes = [];
+
+      // Balanced 2x2 spatial grid when unselected
+      const baseSlots = [
+        { x: -1.65, y: 0.72, z: 0.1, rotY: 0.14, rotZ: 0.025 },
+        { x: 1.65, y: 0.72, z: -0.1, rotY: -0.14, rotZ: -0.025 },
+        { x: -1.55, y: -0.78, z: -0.05, rotY: 0.12, rotZ: -0.02 },
+        { x: 1.55, y: -0.78, z: 0.05, rotY: -0.12, rotZ: 0.02 }
+      ];
+
+      users.forEach((user, idx) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 560;
+        canvas.height = 460;
+        canvasesRef.current[user.role] = canvas;
+
+        drawPaperTexture(
+          canvas,
+          user,
+          selectedRoleRef.current === user.role,
+          liveEmail,
+          livePassword,
+          showPwd,
+          theme,
+          lang
+        );
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 4;
+        texturesRef.current[user.role] = texture;
+
+        // PlaneGeometry with alpha transparency so rounded corners render cleanly without boxy corners
+        const cardGeo = new THREE.PlaneGeometry(2.38, 1.95);
+        const faceMat = new THREE.MeshStandardMaterial({
+          map: texture,
+          transparent: true,
+          roughness: 0.28,
+          metalness: 0.18
+        });
+
+        const paperMesh = new THREE.Mesh(cardGeo, faceMat);
+        const slot = baseSlots[idx % baseSlots.length];
+        paperMesh.position.set(slot.x, slot.y, slot.z);
+        paperMesh.rotation.set(0, slot.rotY, slot.rotZ);
+        paperMesh.userData = { role: user.role };
+        group.add(paperMesh);
+        clickableMeshes.push(paperMesh);
+
+        // Ambient holographic crimson back-halo & corner targeting reticles
+        const haloMat = new THREE.MeshBasicMaterial({
+          color: 0xe32236,
+          transparent: true,
+          opacity: 0
+        });
+        const haloMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.58, 2.15), haloMat);
+        haloMesh.position.z = -0.04;
+        paperMesh.add(haloMesh);
+
+        const reticleGroup = new THREE.Group();
+        const reticleMat = new THREE.MeshBasicMaterial({
+          color: 0xe32236,
+          transparent: true,
+          opacity: 0
+        });
+        const bracketConfigs = [
+          { x: -1.24, y: 1.02, w: 0.24, h: 0.028, ox: 0.106, oy: -0.106 },
+          { x: 1.24, y: 1.02, w: 0.24, h: 0.028, ox: -0.106, oy: -0.106 },
+          { x: -1.24, y: -1.02, w: 0.24, h: 0.028, ox: 0.106, oy: 0.106 },
+          { x: 1.24, y: -1.02, w: 0.24, h: 0.028, ox: -0.106, oy: 0.106 }
+        ];
+        bracketConfigs.forEach((b) => {
+          const hBar = new THREE.Mesh(new THREE.PlaneGeometry(b.w, b.h), reticleMat);
+          hBar.position.set(b.x + b.ox, b.y, 0.03);
+          const vBar = new THREE.Mesh(new THREE.PlaneGeometry(b.h, b.w), reticleMat);
+          vBar.position.set(b.x, b.y + b.oy, 0.03);
+          reticleGroup.add(hBar, vBar);
+        });
+        paperMesh.add(reticleGroup);
+
+        paperNodes.push({
+          role: user.role,
+          mesh: paperMesh,
+          slot,
+          haloMesh,
+          haloMat,
+          reticleGroup,
+          reticleMat
+        });
+      });
+
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+      let hoveredRole = null;
+
+      const handlePointerMove = (e) => {
+        const rect = container.getBoundingClientRect();
+        pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        const hits = raycaster.intersectObjects(clickableMeshes, false);
+        hoveredRole = hits.length > 0 ? hits[0].object.userData.role : null;
+        container.style.cursor = hoveredRole ? 'pointer' : 'default';
+      };
+
+      const handleClick = (e) => {
+        const rect = container.getBoundingClientRect();
+        pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        const hits = raycaster.intersectObjects(clickableMeshes, false);
+        if (hits.length > 0 && hits[0].object.userData.role) {
+          onSelectRole(hits[0].object.userData.role);
+        }
+      };
+
+      container.addEventListener('pointermove', handlePointerMove);
+      container.addEventListener('click', handleClick);
+
+      const handleResize = () => {
+        if (!container) return;
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+      };
+      window.addEventListener('resize', handleResize);
+
+      const clock = new THREE.Clock();
+      const animate = () => {
+        animationFrameId = requestAnimationFrame(animate);
+        const t = clock.getElapsedTime();
+        const activeRole = selectedRoleRef.current;
+        const isAr = lang === 'ar';
+
+        let unselectedIdx = 0;
+
+        paperNodes.forEach((node, idx) => {
+          const isSelected = activeRole === node.role;
+          const isHovered = hoveredRole === node.role;
+
+          let targetX, targetY, targetZ, targetRotY, targetRotZ, targetScale;
+
+          if (!activeRole) {
+            // Initial state: commanding 2x2 grid shifted toward the left-center stage
+            targetX = node.slot.x * 1.12 - (isAr ? -0.35 : 0.35);
+            targetY = node.slot.y * 1.08 + Math.sin(t * 1.2 + idx * 1.3) * 0.05;
+            targetZ = isHovered ? node.slot.z + 0.45 : node.slot.z + 0.25;
+            targetRotY = node.slot.rotY;
+            targetRotZ = node.slot.rotZ;
+            targetScale = isHovered ? 1.18 : 1.1;
+          } else if (isSelected) {
+            // Active state: zoomed card positioned on the left-center stage beside the drawer
+            targetX = isAr ? 0.55 : -0.55;
+            targetY = 0.08;
+            targetZ = 2.95;
+            targetRotY = isAr ? -0.05 : 0.05;
+            targetRotZ = 0;
+            targetScale = 1.28;
+          } else {
+            // Remaining unselected cards stay visible, stacked cleanly along the side column
+            const stackY = 1.15 - unselectedIdx * 1.15;
+            targetX = isAr ? 2.65 : -2.65;
+            targetY = stackY;
+            targetZ = isHovered ? 0.35 : -0.15;
+            targetRotY = isAr ? -0.16 : 0.16;
+            targetRotZ = 0;
+            targetScale = isHovered ? 0.68 : 0.6;
+            unselectedIdx++;
+          }
+
+          node.mesh.position.x += (targetX - node.mesh.position.x) * 0.11;
+          node.mesh.position.y += (targetY - node.mesh.position.y) * 0.11;
+          node.mesh.position.z += (targetZ - node.mesh.position.z) * 0.11;
+
+          node.mesh.rotation.y += (targetRotY - node.mesh.rotation.y) * 0.11;
+          node.mesh.rotation.z += (targetRotZ - node.mesh.rotation.z) * 0.11;
+
+          const nextScale = node.mesh.scale.x + (targetScale - node.mesh.scale.x) * 0.11;
+          node.mesh.scale.set(nextScale, nextScale, nextScale);
+
+          // Pulsing holographic back-halo + expanding corner targeting reticles
+          const pulse = 0.5 + 0.5 * Math.sin(t * 3.0);
+          const targetHaloOpacity = isSelected ? 0.16 + pulse * 0.1 : isHovered ? 0.08 : 0;
+          node.haloMat.opacity += (targetHaloOpacity - node.haloMat.opacity) * 0.12;
+
+          const targetReticleOpacity = isSelected ? 0.9 : isHovered ? 0.45 : 0;
+          node.reticleMat.opacity += (targetReticleOpacity - node.reticleMat.opacity) * 0.14;
+          const reticleExpand = isSelected ? 1.0 + pulse * 0.022 : 1.04;
+          node.reticleGroup.scale.set(reticleExpand, reticleExpand, 1);
+        });
+
+        renderer.render(scene, camera);
+      };
+      animate();
+
+      return () => {
+        cancelAnimationFrame(animationFrameId);
+        container.removeEventListener('pointermove', handlePointerMove);
+        container.removeEventListener('click', handleClick);
+        window.removeEventListener('resize', handleResize);
+        Object.values(texturesRef.current).forEach((tx) => tx.dispose());
+        if (renderer?.domElement && container.contains(renderer.domElement)) {
+          container.removeChild(renderer.domElement);
+        }
+        renderer.dispose();
+      };
+    } catch (e) {
+      console.warn(e);
+    }
+  }, [theme, lang, users, onSelectRole, drawPaperTexture]);
+
+  return <div ref={mountRef} className="w-full h-[440px] sm:h-[510px]" />;
+};
+
+// ============================================================================
+// 5. BRAND LOGO & REUSABLE UI DESIGN SYSTEM COMPONENTS
+// ============================================================================
+const ProcuraLogo = ({ theme, size = 'md' }) => {
+  const isDark = theme === 'dark';
+  const dim = size === 'sm' ? 28 : size === 'lg' ? 40 : 34;
+  return (
+    <div className="flex items-center gap-3 select-none">
+      <svg width={dim} height={dim} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 6H24C30.6274 6 36 11.3726 36 18C36 24.6274 30.6274 30 24 30H15V36H6V6Z" fill="#E32236" />
+        <path d="M15 14H23.5C25.7091 14 27.5 15.7909 27.5 18C27.5 20.2091 25.7091 22 23.5 22H15V14Z" fill={isDark ? '#090B10' : '#FFFFFF'} />
+        <path d="M6 24L15 30V36H6V24Z" fill="#9E1422" />
+      </svg>
+      <div className="flex flex-col">
+        <span className={`font-extrabold tracking-[0.18em] leading-none ${size === 'lg' ? 'text-2xl' : 'text-lg'} ${isDark ? 'text-[#F2F3F5]' : 'text-[#252932]'}`}>
+          PROCURA
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const StatusBadge = ({ status, lang }) => {
+  const t = TRANSLATIONS[lang];
+  const styles = {
+    Draft: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
+    Submitted: 'bg-sky-500/15 text-sky-500 border-sky-500/30',
+    OffersReceived: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
+    Compared: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+    PendingApproval: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
+    Approved: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
+    Rejected: 'bg-[#E32236]/15 text-[#E32236] border-[#E32236]/30'
+  };
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold border tracking-wide ${styles[status] || styles.Draft}`}>
+      <span className="w-1.5 h-1.5 rounded-full bg-current" />
+      {t[`status_${status}`] || status}
+    </span>
+  );
+};
+
+// ============================================================================
+// 6. MAIN APPLICATION (ALL 11 SCREENS + 44 CONFIGURATIONS)
+// ============================================================================
+export default function App() {
+  const loadStored = (key, fallback) => {
+    try {
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
+  const [theme, setTheme] = useState(() => loadStored('procura_theme', 'dark'));
+  const [lang, setLang] = useState(() => loadStored('procura_lang', 'en'));
+  const [currentUser, setCurrentUser] = useState(() => loadStored('procura_user', null));
+  const [activeScreen, setActiveScreen] = useState(() => loadStored('procura_screen', 1));
+  const [selectedRequestId, setSelectedRequestId] = useState(() => loadStored('procura_req_id', 'PR-1048'));
+  const [selectedOfferId, setSelectedOfferId] = useState(() => loadStored('procura_offer_id', 'OFF-204'));
+  const [requests, setRequests] = useState(() => loadStored('procura_requests', INITIAL_REQUESTS));
+  const [offers, setOffers] = useState(() => loadStored('procura_offers', INITIAL_OFFERS));
+  const [auditLog, setAuditLog] = useState(() => loadStored('procura_audit', INITIAL_AUDIT_LOG));
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [presentationMode, setPresentationMode] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  useEffect(() => { localStorage.setItem('procura_theme', JSON.stringify(theme)); }, [theme]);
+  useEffect(() => { localStorage.setItem('procura_lang', JSON.stringify(lang)); }, [lang]);
+  useEffect(() => { localStorage.setItem('procura_user', JSON.stringify(currentUser)); }, [currentUser]);
+  useEffect(() => { localStorage.setItem('procura_screen', JSON.stringify(activeScreen)); }, [activeScreen]);
+  useEffect(() => { localStorage.setItem('procura_req_id', JSON.stringify(selectedRequestId)); }, [selectedRequestId]);
+  useEffect(() => { localStorage.setItem('procura_offer_id', JSON.stringify(selectedOfferId)); }, [selectedOfferId]);
+  useEffect(() => { localStorage.setItem('procura_requests', JSON.stringify(requests)); }, [requests]);
+  useEffect(() => { localStorage.setItem('procura_offers', JSON.stringify(offers)); }, [offers]);
+  useEffect(() => { localStorage.setItem('procura_audit', JSON.stringify(auditLog)); }, [auditLog]);
+
+  useEffect(() => {
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = lang;
+  }, [lang]);
+
+  // Hydrate live backend data automatically when API_CONFIG.USE_LIVE_API is enabled
+  useEffect(() => {
+    if (!API_CONFIG.USE_LIVE_API) return;
+    Promise.all([
+      ProcuraApiService.fetchRequests(),
+      ProcuraApiService.fetchAuditLogs()
+    ])
+      .then(([liveReqs, liveLogs]) => {
+        if (Array.isArray(liveReqs)) setRequests(liveReqs);
+        if (Array.isArray(liveLogs)) setAuditLog(liveLogs);
+      })
+      .catch((err) => console.error('Failed to sync with PROCURA API:', err));
+  }, []);
+
+  const t = TRANSLATIONS[lang];
+  const isDark = theme === 'dark';
+  const isRtl = lang === 'ar';
+
+  const showToast = useCallback((msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  }, []);
+
+  const addAuditEntry = useCallback((action, actionAr, requestId, details, detailsAr) => {
+    const actor = currentUser ? currentUser.name : 'System';
+    const actorAr = currentUser ? currentUser.nameAr : 'النظام';
+    const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const entry = {
+      id: `AUD-${Math.floor(1000 + Math.random() * 9000)}`,
+      timestamp: now,
+      user: actor,
+      userAr: actorAr,
+      action,
+      actionAr,
+      requestId,
+      details,
+      detailsAr
+    };
+    setAuditLog((prev) => [entry, ...prev]);
+  }, [currentUser]);
+
+  const handleResetDemo = () => {
+    setRequests(INITIAL_REQUESTS);
+    setOffers(INITIAL_OFFERS);
+    setAuditLog(INITIAL_AUDIT_LOG);
+    setSelectedRequestId('PR-1048');
+    setSelectedOfferId('OFF-204');
+    showToast(isRtl ? 'تمت إعادة ضبط بيانات العرض التجريبي بنجاح' : 'Demo data reset to factory baseline.');
+  };
+
+  const loginAsRole = (role, targetScreen = null) => {
+    const foundUser = DEMO_USERS.find((u) => u.role === role) || DEMO_USERS[0];
+    setCurrentUser(foundUser);
+    if (targetScreen) {
+      setActiveScreen(targetScreen);
+    } else {
+      if (role === 'requester' || role === 'officer') setActiveScreen(2);
+      else if (role === 'manager') setActiveScreen(5);
+      else if (role === 'supplier') setActiveScreen(7);
+    }
+  };
+
+  const jumpToScreen = (screenNum) => {
+    if (screenNum === 1) {
+      setActiveScreen(1);
+      return;
+    }
+    if (screenNum === 3) {
+      if (!currentUser || currentUser.role !== 'requester') loginAsRole('requester', 3);
+      else setActiveScreen(3);
+      return;
+    }
+    if (screenNum === 5) {
+      if (!currentUser || currentUser.role !== 'manager') loginAsRole('manager', 5);
+      else setActiveScreen(5);
+      return;
+    }
+    if (screenNum === 6 || screenNum === 10 || screenNum === 11) {
+      if (!currentUser || (currentUser.role !== 'officer' && currentUser.role !== 'manager')) {
+        loginAsRole('officer', screenNum);
+      } else {
+        setActiveScreen(screenNum);
+      }
+      return;
+    }
+    if (screenNum === 7 || screenNum === 8) {
+      if (!currentUser || currentUser.role !== 'supplier') loginAsRole('supplier', screenNum);
+      else setActiveScreen(screenNum);
+      return;
+    }
+    if (screenNum === 9) {
+      if (!currentUser || currentUser.role !== 'officer') loginAsRole('officer', 4);
+      else setActiveScreen(4);
+      setIsInviteModalOpen(true);
+      return;
+    }
+    if (!currentUser) loginAsRole('officer', screenNum);
+    else setActiveScreen(screenNum);
+  };
+
+  const bgMain = isDark ? 'bg-[#090B10] text-[#F2F3F5]' : 'bg-[#F2F3F5] text-[#252932]';
+  const bgSurface = isDark ? 'bg-[#191C24] border-[#282D3A]' : 'bg-[#FFFFFF] border-[#E2E5EB]';
+  const bgSubtle = isDark ? 'bg-[#12151C] border-[#242936]' : 'bg-[#F8F9FB] border-[#E5E8EE]';
+  const textMuted = isDark ? 'text-[#949BA8]' : 'text-[#5C6473]';
+
+  const currentRequest = useMemo(
+    () => requests.find((r) => r.id === selectedRequestId) || requests[0],
+    [requests, selectedRequestId]
+  );
+
+  // ==========================================================================
+  // SCREEN 01: LOGIN PAGE (3D CREDENTIAL CARDS + SLIDE-OUT SIGN-IN DRAWER)
+  // ==========================================================================
+  const LoginScreen = () => {
+    const [selectedRole, setSelectedRole] = useState(null);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [showPwd, setShowPwd] = useState(false);
+    const [errors, setErrors] = useState({});
+    const [authError, setAuthError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [activePaperInput, setActivePaperInput] = useState('email');
+    const emailInputRef = useRef(null);
+
+    const handleSelectRolePaper = useCallback((role) => {
+      setSelectedRole(role);
+      setIsDrawerOpen(true);
+      const matched = DEMO_USERS.find((u) => u.role === role);
+      if (matched) {
+        setEmail(matched.email);
+        setPassword('Procura@2026');
+        setErrors({});
+        setAuthError('');
+      }
+      setTimeout(() => {
+        emailInputRef.current?.focus();
+      }, 320);
+    }, []);
+
+    const handleCloseDrawer = () => {
+      setIsDrawerOpen(false);
+      setSelectedRole(null);
+    };
+
+    // Allow direct keyboard typing even when the user just clicked on the 3D canvas
+    const handleCanvasKeyDown = (e) => {
+      if (!isDrawerOpen) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        if (activePaperInput === 'password') setPassword((p) => p.slice(0, -1));
+        else setEmail((em) => em.slice(0, -1));
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        setActivePaperInput((prev) => (prev === 'email' ? 'password' : 'email'));
+      } else if (e.key.length === 1) {
+        e.preventDefault();
+        if (activePaperInput === 'password') setPassword((p) => p + e.key);
+        else setEmail((em) => em + e.key);
+      }
+    };
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      setAuthError('');
+      const errs = {};
+      if (!email.trim()) errs.email = t.requiredField;
+      if (!password.trim()) errs.password = t.requiredField;
+      setErrors(errs);
+      if (Object.keys(errs).length > 0) return;
+
+      setLoading(true);
+      try {
+        const res = await ProcuraApiService.login(email, password);
+        setLoading(false);
+        if (res?.user) {
+          loginAsRole(res.user.role);
+        } else if (email.includes('@')) {
+          loginAsRole(selectedRole || 'requester');
+        } else {
+          setAuthError(t.invalidCreds);
+        }
+      } catch (err) {
+        setLoading(false);
+        setAuthError(err.message || t.invalidCreds);
+      }
+    };
+
+    return (
+      <div className={`min-h-[calc(100vh-44px)] relative overflow-hidden flex ${bgMain}`}>
+        {/* Main 3D Role Cards Stage (Full-width initially, reserves full space for right drawer when open so nothing overlaps) */}
+        <div
+          className={`flex-1 flex flex-col justify-between p-6 lg:p-10 transition-all duration-500 ease-out ${
+            isDrawerOpen ? (isRtl ? 'lg:pl-[460px]' : 'lg:pr-[460px]') : ''
+          }`}
+        >
+          <div className="relative z-10 flex items-center justify-between max-w-6xl w-full mx-auto">
+            <ProcuraLogo theme={theme} size="lg" />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
+                className={`px-3 py-1.5 rounded border text-xs font-semibold flex items-center gap-1.5 transition ${bgSurface} hover:border-[#E32236]`}
+              >
+                <Globe className="w-3.5 h-3.5 text-[#E32236]" />
+                {lang === 'en' ? 'العربية' : 'English'}
+              </button>
+              <button
+                onClick={() => setTheme(isDark ? 'light' : 'dark')}
+                className={`p-2 rounded border transition ${bgSurface} hover:border-[#E32236]`}
+                aria-label="Toggle Theme"
+              >
+                {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-[#252932]" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="relative z-10 mt-6 mb-2 max-w-6xl w-full mx-auto">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-[#E32236]/10 border border-[#E32236]/30 text-[#E32236] text-[11px] font-bold tracking-widest uppercase mb-3">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              {isRtl ? 'بطاقات الاعتماد المؤسسية ثلاثية الأبعاد' : 'ENTERPRISE 3D ACCESS CREDENTIAL CARDS'}
+            </div>
+            <h1 className="text-3xl lg:text-5xl font-extrabold tracking-tight leading-[1.1] mb-2 max-w-3xl">
+              {t.loginHeroTitle}
+            </h1>
+            <p className={`text-xs sm:text-sm max-w-2xl ${textMuted}`}>
+              {isRtl
+                ? 'اضغط على أي بطاقة اعتماد في المساحة ثلاثية الأبعاد لسحب لوحة تسجيل الدخول من جانب الشاشة وتعبئة البيانات تلقائياً.'
+                : 'Select any 3D enterprise access pass below to pull out the authentication drawer from the right edge of the monitor.'}
+            </p>
+          </div>
+
+          {/* 3D Interactive Credential Cards Stage */}
+          <div
+            tabIndex={0}
+            onKeyDown={handleCanvasKeyDown}
+            className="relative z-10 my-auto max-w-6xl w-full mx-auto outline-none rounded-2xl focus:ring-1 focus:ring-[#E32236]/40"
+          >
+            <LoginRolePapersThreeScene
+              theme={theme}
+              lang={lang}
+              users={DEMO_USERS}
+              selectedRole={selectedRole}
+              onSelectRole={handleSelectRolePaper}
+              liveEmail={email}
+              livePassword={password}
+              showPwd={showPwd}
+            />
+          </div>
+
+          {/* Bottom Quick Role Selector Strip */}
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-black/10 dark:border-white/10 max-w-6xl w-full mx-auto">
+            <div className="flex flex-wrap gap-2">
+              {DEMO_USERS.map((u) => {
+                const active = selectedRole === u.role;
+                return (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => handleSelectRolePaper(u.role)}
+                    className={`px-3.5 py-1.5 rounded-lg border text-xs font-bold transition ${
+                      active
+                        ? 'bg-[#E32236] text-white border-[#E32236] shadow-md shadow-[#E32236]/20'
+                        : `${bgSurface} ${textMuted} hover:border-[#E32236]`
+                    }`}
+                  >
+                    {t[`role_${u.role}`]}
+                  </button>
+                );
+              })}
+            </div>
+            <span className={`text-[11px] font-mono-code ${textMuted}`}>
+              {isDrawerOpen
+                ? (isRtl ? 'لوحة الدخول نشطة' : 'AUTH DRAWER DEPLOYED')
+                : (isRtl ? 'اختر بطاقة للبدء' : 'SELECT A CREDENTIAL CARD TO BEGIN')}
+            </span>
+          </div>
+        </div>
+
+        {/* Slide-Out Sign-In Drawer pulled from the right edge of the monitor */}
+        <div
+          className={`fixed lg:absolute top-0 bottom-0 ${isRtl ? 'left-0 border-r' : 'right-0 border-l'} z-30 w-full sm:w-[440px] p-7 sm:p-10 shadow-2xl flex flex-col justify-between transition-transform duration-500 ease-out ${bgSurface} ${
+            isDrawerOpen
+              ? 'translate-x-0 pointer-events-auto'
+              : isRtl
+              ? '-translate-x-full pointer-events-none'
+              : 'translate-x-full pointer-events-none'
+          }`}
+        >
+          <div>
+            <div className="flex items-center justify-between pb-5 mb-6 border-b border-black/10 dark:border-white/10">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded bg-[#E32236]/10 border border-[#E32236]/30 text-[#E32236] text-[11px] font-bold uppercase tracking-wider">
+                  {selectedRole ? t[`role_${selectedRole}`] : ''}
+                </span>
+                <span className={`text-xs font-mono-code ${textMuted}`}>
+                  {DEMO_USERS.find((u) => u.role === selectedRole)?.id}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCloseDrawer}
+                className={`p-2 rounded-lg border transition ${bgSubtle} hover:border-[#E32236] hover:text-[#E32236]`}
+                title={t.cancel}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <h2 className="text-2xl font-extrabold tracking-tight mb-1.5">{t.welcomeBack}</h2>
+              <p className={`text-xs leading-relaxed ${textMuted}`}>{t.signInSub}</p>
+            </div>
+
+            {authError && (
+              <div className="mb-4 p-3 rounded-lg bg-[#E32236]/10 border border-[#E32236]/40 text-[#E32236] text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{authError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">{t.email}</label>
+                <input
+                  ref={emailInputRef}
+                  type="email"
+                  value={email}
+                  onFocus={() => setActivePaperInput('email')}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={`w-full px-3.5 py-2.5 rounded-lg border text-sm font-mono-code outline-none transition focus:border-[#E32236] ${bgSubtle}`}
+                />
+                {errors.email && <p className="text-xs text-[#E32236] mt-1">{errors.email}</p>}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">{t.password}</label>
+                <div className="relative">
+                  <input
+                    type={showPwd ? 'text' : 'password'}
+                    value={password}
+                    onFocus={() => setActivePaperInput('password')}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={`w-full px-3.5 py-2.5 rounded-lg border text-sm font-mono-code outline-none transition focus:border-[#E32236] ${bgSubtle}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd(!showPwd)}
+                    className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'left-3' : 'right-3'} ${textMuted} hover:text-[#E32236]`}
+                  >
+                    {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {errors.password && <p className="text-xs text-[#E32236] mt-1">{errors.password}</p>}
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 px-4 rounded-lg bg-[#E32236] hover:bg-[#C81B2D] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#E32236]/25 transition disabled:opacity-60"
+              >
+                {loading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    {t.signingIn}
+                  </>
+                ) : (
+                  <>
+                    {t.signIn}
+                    {isRtl ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+
+          <div className="pt-5 border-t border-black/10 dark:border-white/10">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#E32236] block mb-1">
+              {t.demoAccounts}
+            </span>
+            <p className={`text-xs ${textMuted}`}>{t.demoNotice}</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ==========================================================================
+  // SCREEN 02: REQUESTS LIST (EDITORIAL DATA LEDGER)
+  // ==========================================================================
+  const RequestsListScreen = () => {
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
+    const [viewState, setViewState] = useState('normal');
+
+    const visibleRequests = useMemo(() => {
+      let list = requests;
+      if (currentUser?.role === 'requester') {
+        list = list.filter((r) => r.requesterId === currentUser.id);
+      }
+      if (statusFilter !== 'ALL') {
+        list = list.filter((r) => r.status === statusFilter);
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        list = list.filter(
+          (r) =>
+            r.title.toLowerCase().includes(q) ||
+            r.titleAr.includes(q) ||
+            r.id.toLowerCase().includes(q)
+        );
+      }
+      return list;
+    }, [requests, currentUser, statusFilter, searchQuery]);
+
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-5 border-b border-black/10 dark:border-white/10">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-widest text-[#E32236] mb-1">
+              02 // REQUISITION LEDGER
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight">{t.requestsTitle}</h1>
+            <p className={`text-sm mt-1 ${textMuted}`}>{t.requestsSubtitle}</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className={`flex items-center gap-1 p-1 rounded-lg border text-xs ${bgSurface}`}>
+              <span className={`px-2 font-medium ${textMuted}`}>{t.simulateStates}</span>
+              {['normal', 'loading', 'empty', 'error'].map((st) => (
+                <button
+                  key={st}
+                  onClick={() => setViewState(st)}
+                  className={`px-2.5 py-1 rounded font-semibold transition ${
+                    viewState === st ? 'bg-[#E32236] text-white' : `${textMuted} hover:text-[#E32236]`
+                  }`}
+                >
+                  {t[`state${st.charAt(0).toUpperCase() + st.slice(1)}`]}
+                </button>
+              ))}
+            </div>
+
+            {currentUser?.role === 'requester' && (
+              <button
+                onClick={() => setActiveScreen(3)}
+                className="px-4 py-2.5 rounded-lg bg-[#E32236] hover:bg-[#C81B2D] text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-[#E32236]/20 transition"
+              >
+                <Plus className="w-4 h-4" />
+                {t.newRequest}
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative flex-1">
+            <Search className={`w-4 h-4 absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-3.5' : 'left-3.5'} ${textMuted}`} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t.searchPlaceholder}
+              className={`w-full ${isRtl ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2.5 rounded-lg border text-sm outline-none focus:border-[#E32236] ${bgSurface}`}
+            />
+          </div>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className={`px-4 py-2.5 rounded-lg border text-sm font-medium outline-none focus:border-[#E32236] ${bgSurface}`}
+          >
+            <option value="ALL">{t.allStatuses}</option>
+            {['Draft', 'Submitted', 'OffersReceived', 'Compared', 'PendingApproval', 'Approved', 'Rejected'].map((st) => (
+              <option key={st} value={st}>{t[`status_${st}`]}</option>
+            ))}
+          </select>
+        </div>
+
+        {viewState === 'loading' ? (
+          <div className={`rounded-xl border p-16 text-center ${bgSurface}`}>
+            <RefreshCw className="w-8 h-8 text-[#E32236] animate-spin mx-auto mb-3" />
+            <p className="text-sm font-semibold">{t.loadingData}</p>
+          </div>
+        ) : viewState === 'error' ? (
+          <div className={`rounded-xl border p-16 text-center ${bgSurface}`}>
+            <AlertTriangle className="w-8 h-8 text-[#E32236] mx-auto mb-3" />
+            <p className="text-sm font-semibold mb-4">{t.errorLoading}</p>
+            <button
+              onClick={() => setViewState('normal')}
+              className="px-4 py-2 rounded-lg bg-[#E32236] text-white text-xs font-bold"
+            >
+              {t.retry}
+            </button>
+          </div>
+        ) : viewState === 'empty' || visibleRequests.length === 0 ? (
+          <div className={`rounded-xl border p-16 text-center ${bgSurface}`}>
+            <FileText className={`w-10 h-10 mx-auto mb-3 ${textMuted}`} />
+            <p className="text-base font-bold">{t.noRequests}</p>
+          </div>
+        ) : (
+          <div className={`rounded-xl border overflow-hidden ${bgSurface}`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-start border-collapse">
+                <thead>
+                  <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${bgSubtle} ${textMuted}`}>
+                    <th className="py-3.5 px-5 text-start">{t.reqId}</th>
+                    <th className="py-3.5 px-5 text-start">{t.reqTitle}</th>
+                    <th className="py-3.5 px-5 text-start">{t.quantity}</th>
+                    <th className="py-3.5 px-5 text-start">{t.estBudget}</th>
+                    <th className="py-3.5 px-5 text-start">{t.status}</th>
+                    <th className="py-3.5 px-5 text-start">{t.createdDate}</th>
+                    <th className="py-3.5 px-5 text-end"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-white/5 text-sm">
+                  {visibleRequests.map((req) => (
+                    <tr
+                      key={req.id}
+                      onClick={() => {
+                        setSelectedRequestId(req.id);
+                        setActiveScreen(4);
+                      }}
+                      className="cursor-pointer transition hover:bg-[#E32236]/[0.04] group"
+                    >
+                      <td className="py-4 px-5 font-mono-code font-bold text-[#E32236]">{req.id}</td>
+                      <td className="py-4 px-5">
+                        <div className="font-bold group-hover:text-[#E32236] transition">
+                          {isRtl ? req.titleAr : req.title}
+                        </div>
+                        <div className={`text-xs mt-0.5 ${textMuted}`}>
+                          {isRtl ? req.requesterNameAr : req.requesterName}
+                        </div>
+                      </td>
+                      <td className="py-4 px-5 font-mono-code font-semibold">
+                        {req.quantity} <span className={`text-xs font-normal ${textMuted}`}>{t.units}</span>
+                      </td>
+                      <td className="py-4 px-5 font-mono-code font-bold">
+                        ${req.estimatedBudget.toLocaleString()}
+                      </td>
+                      <td className="py-4 px-5">
+                        <StatusBadge status={req.status} lang={lang} />
+                      </td>
+                      <td className={`py-4 px-5 font-mono-code text-xs ${textMuted}`}>{req.createdDate}</td>
+                      <td className="py-4 px-5 text-end">
+                        {isRtl ? (
+                          <ChevronLeft className="w-4 h-4 inline text-[#E32236]" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 inline text-[#E32236]" />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ==========================================================================
+  // SCREEN 03: CREATE REQUEST (REQUESTER ONLY — EDITORIAL SPLIT FORM)
+  // ==========================================================================
+  const CreateRequestScreen = () => {
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [quantity, setQuantity] = useState('');
+    const [budget, setBudget] = useState('');
+    const [reason, setReason] = useState('');
+    const [deliveryDate, setDeliveryDate] = useState('');
+    const [errors, setErrors] = useState({});
+
+    const validateForm = () => {
+      const errs = {};
+      if (!title.trim()) errs.title = t.requiredField;
+      if (!quantity || Number(quantity) <= 0) errs.quantity = t.mustBePositive;
+      if (!budget || Number(budget) <= 0) errs.budget = t.mustBePositive;
+      if (!reason.trim()) errs.reason = t.requiredField;
+      setErrors(errs);
+      return Object.keys(errs).length === 0;
+    };
+
+    const handleCreate = (targetStatus) => {
+      if (!validateForm()) return;
+      const newId = `PR-${Math.floor(1051 + Math.random() * 899)}`;
+      const newReq = {
+        id: newId,
+        title: title.trim(),
+        titleAr: title.trim(),
+        description: description.trim() || 'Standard enterprise procurement specification.',
+        descriptionAr: description.trim() || 'مواصفات شراء مؤسسية قياسية.',
+        quantity: Number(quantity),
+        estimatedBudget: Number(budget),
+        reason: reason.trim(),
+        reasonAr: reason.trim(),
+        deliveryDate: deliveryDate || '2026-12-30',
+        requesterId: currentUser?.id || 'USR-01',
+        requesterName: currentUser?.name || 'Belal Khalil',
+        requesterNameAr: currentUser?.nameAr || 'بلال خليل',
+        status: targetStatus,
+        createdDate: new Date().toISOString().split('T')[0],
+        invitedSupplierIds: []
+      };
+
+      setRequests((prev) => [newReq, ...prev]);
+      setSelectedRequestId(newId);
+      addAuditEntry(
+        targetStatus === 'Draft' ? 'Saved Request Draft' : 'Created & Submitted Request',
+        targetStatus === 'Draft' ? 'حفظ مسودة طلب' : 'إنشاء وإرسال طلب شراء',
+        newId,
+        `${newReq.title} (${newReq.quantity} units, $${newReq.estimatedBudget.toLocaleString()})`,
+        `${newReq.titleAr} (${newReq.quantity} وحدة، $${newReq.estimatedBudget.toLocaleString()})`
+      );
+      setActiveScreen(4);
+      showToast(
+        targetStatus === 'Draft'
+          ? (isRtl ? 'تم حفظ الطلب كمسودة' : 'Purchase request saved as Draft.')
+          : (isRtl ? 'تم إرسال طلب الشراء بنجاح' : 'Purchase request submitted to Procurement.')
+      );
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between pb-5 border-b border-black/10 dark:border-white/10">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-widest text-[#E32236] mb-1">
+              03 // REQUISITION ORIGINATION
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight">{t.createReqTitle}</h1>
+            <p className={`text-sm mt-1 ${textMuted}`}>{t.createReqSub}</p>
+          </div>
+          <button
+            onClick={() => setActiveScreen(2)}
+            className={`px-3.5 py-2 rounded-lg border text-xs font-semibold ${bgSurface} hover:border-[#E32236]`}
+          >
+            {t.cancel}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className={`lg:col-span-8 p-6 lg:p-8 rounded-xl border space-y-5 ${bgSurface}`}>
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
+                {t.fieldTitle} <span className="text-[#E32236]">*</span>
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={t.fieldTitlePlaceholder}
+                className={`w-full px-4 py-2.5 rounded-lg border text-sm outline-none focus:border-[#E32236] ${bgSubtle}`}
+              />
+              {errors.title && <p className="text-xs text-[#E32236] mt-1">{errors.title}</p>}
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">{t.fieldDesc}</label>
+              <textarea
+                rows={4}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={t.fieldDescPlaceholder}
+                className={`w-full px-4 py-2.5 rounded-lg border text-sm outline-none focus:border-[#E32236] ${bgSubtle}`}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
+                  {t.fieldQty} <span className="text-[#E32236]">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  placeholder="10"
+                  className={`w-full px-4 py-2.5 rounded-lg border text-sm font-mono-code outline-none focus:border-[#E32236] ${bgSubtle}`}
+                />
+                {errors.quantity && <p className="text-xs text-[#E32236] mt-1">{errors.quantity}</p>}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
+                  {t.fieldBudget} <span className="text-[#E32236]">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={budget}
+                  onChange={(e) => setBudget(e.target.value)}
+                  placeholder="15000"
+                  className={`w-full px-4 py-2.5 rounded-lg border text-sm font-mono-code outline-none focus:border-[#E32236] ${bgSubtle}`}
+                />
+                {errors.budget && <p className="text-xs text-[#E32236] mt-1">{errors.budget}</p>}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">{t.fieldDeliveryDate}</label>
+                <input
+                  type="date"
+                  value={deliveryDate}
+                  onChange={(e) => setDeliveryDate(e.target.value)}
+                  className={`w-full px-4 py-2.5 rounded-lg border text-sm font-mono-code outline-none focus:border-[#E32236] ${bgSubtle}`}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
+                {t.fieldReason} <span className="text-[#E32236]">*</span>
+              </label>
+              <input
+                type="text"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder={t.fieldReasonPlaceholder}
+                className={`w-full px-4 py-2.5 rounded-lg border text-sm outline-none focus:border-[#E32236] ${bgSubtle}`}
+              />
+              {errors.reason && <p className="text-xs text-[#E32236] mt-1">{errors.reason}</p>}
+            </div>
+
+            <div className="pt-4 border-t border-black/10 dark:border-white/10 flex flex-wrap items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => handleCreate('Draft')}
+                className={`px-5 py-2.5 rounded-lg border text-sm font-semibold transition ${bgSubtle} hover:border-[#E32236]`}
+              >
+                {t.saveDraft}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCreate('Submitted')}
+                className="px-6 py-2.5 rounded-lg bg-[#E32236] hover:bg-[#C81B2D] text-white text-sm font-semibold shadow-lg shadow-[#E32236]/25 transition flex items-center gap-2"
+              >
+                <Send className="w-4 h-4" />
+                {t.submitRequest}
+              </button>
+            </div>
+          </div>
+
+          <div className={`lg:col-span-4 p-6 rounded-xl border flex flex-col justify-between ${bgSurface}`}>
+            <div>
+              <div className="text-xs font-bold uppercase tracking-widest text-[#E32236] mb-3">
+                {isRtl ? 'ملخص المواصفات الفورية' : 'LIVE REQUISITION BRIEF'}
+              </div>
+              <div className={`p-4 rounded-lg border space-y-3 ${bgSubtle}`}>
+                <div>
+                  <span className={`text-[11px] uppercase ${textMuted}`}>{t.reqTitle}</span>
+                  <p className="font-bold text-sm mt-0.5">{title || '—'}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-black/5 dark:border-white/5">
+                  <div>
+                    <span className={`text-[11px] uppercase ${textMuted}`}>{t.quantity}</span>
+                    <p className="font-mono-code font-bold text-base">{quantity || '0'} {t.units}</p>
+                  </div>
+                  <div>
+                    <span className={`text-[11px] uppercase ${textMuted}`}>{t.estBudget}</span>
+                    <p className="font-mono-code font-bold text-base text-[#E32236]">
+                      ${Number(budget || 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-black/5 dark:border-white/5">
+                  <span className={`text-[11px] uppercase ${textMuted}`}>{t.requesterLabel}</span>
+                  <p className="font-semibold text-xs mt-0.5">
+                    {isRtl ? currentUser?.nameAr : currentUser?.name}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className={`mt-6 p-4 rounded-lg border text-xs leading-relaxed ${bgSubtle} ${textMuted}`}>
+              <ShieldCheck className="w-5 h-5 text-[#E32236] mb-2" />
+              {isRtl
+                ? 'سيتم تسجيل الطلب في سجل التدقيق المؤسسي وإحالته تلقائياً إلى مسؤول المشتريات فور الإرسال.'
+                : 'Submitting this requisition logs an immutable audit event and routes specifications to Strategic Procurement.'}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ==========================================================================
+  // SCREEN 11: SUPPLIER COMPARISON TABLE (USABLE 3D DECISION MATRIX + TABLE)
+  // ==========================================================================
+  const SupplierComparisonView = ({ requestId, standalone = false }) => {
+    const reqOffers = offers.filter((o) => o.requestId === requestId);
+    const validPrices = reqOffers.filter((o) => o.reviewed && o.totalPrice > 0).map((o) => o.totalPrice);
+    const validDays = reqOffers.filter((o) => o.reviewed && o.deliveryDays > 0).map((o) => o.deliveryDays);
+
+    const minPrice = validPrices.length ? Math.min(...validPrices) : null;
+    const minDays = validDays.length ? Math.min(...validDays) : null;
+
+    const [priority, setPriority] = useState('balanced');
+    const [selectedOffer, setSelectedOffer] = useState(reqOffers[0]?.id || null);
+    const [use3D, setUse3D] = useState(true);
+
+    return (
+      <div className="space-y-5">
+        {standalone && (
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-5 border-b border-black/10 dark:border-white/10">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-widest text-[#E32236] mb-1">
+                11 // COMMERCIAL EVALUATION MATRIX
+              </div>
+              <h1 className="text-3xl font-extrabold tracking-tight">{t.comparisonTitle}</h1>
+              <p className={`text-sm mt-1 ${textMuted}`}>{t.comparisonSub}</p>
+            </div>
+            <button
+              onClick={() => setActiveScreen(4)}
+              className={`px-4 py-2 rounded-lg border text-xs font-semibold ${bgSurface} hover:border-[#E32236]`}
+            >
+              {t.backToRequests} ({requestId})
+            </button>
+          </div>
+        )}
+
+        {reqOffers.length === 0 ? (
+          <div className={`p-8 rounded-xl border text-center text-sm ${bgSubtle} ${textMuted}`}>
+            {t.noOffersYet}
+          </div>
+        ) : (
+          <>
+            <div className={`rounded-xl border p-4 space-y-3 ${bgSubtle}`}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {[
+                    { id: 'balanced', label: t.priorityBalanced },
+                    { id: 'price', label: t.priorityPrice },
+                    { id: 'delivery', label: t.priorityDelivery },
+                    { id: 'warranty', label: t.priorityWarranty }
+                  ].map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setPriority(p.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition ${
+                        priority === p.id
+                          ? 'bg-[#E32236] text-white border-[#E32236]'
+                          : `${bgSurface} ${textMuted} hover:border-[#E32236]`
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setUse3D(!use3D)}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1.5 ${bgSurface} hover:border-[#E32236]`}
+                >
+                  <Box className="w-3.5 h-3.5 text-[#E32236]" />
+                  <span>{use3D ? t.viewClassic : t.view3d}</span>
+                </button>
+              </div>
+
+              {use3D && (
+                <>
+                  <ComparisonThreeScene
+                    theme={theme}
+                    offers={reqOffers}
+                    priority={priority}
+                    selectedOfferId={selectedOffer}
+                    onSelectOffer={setSelectedOffer}
+                  />
+                  <div className={`text-[11px] flex items-center justify-between ${textMuted}`}>
+                    <span>{t.clickColumnHint}</span>
+                    <span className="font-mono-code text-[#E32236] font-bold">{requestId}</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className={`rounded-xl border overflow-hidden ${bgSurface}`}>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-start">
+                  <thead>
+                    <tr className={`border-b ${bgSubtle}`}>
+                      <th className={`p-4 text-start text-xs font-bold uppercase tracking-wider w-56 ${textMuted}`}>
+                        {t.categoryCol}
+                      </th>
+                      {reqOffers.map((offer) => {
+                        const isSelected = selectedOffer === offer.id;
+                        return (
+                          <th
+                            key={offer.id}
+                            onClick={() => setSelectedOffer(offer.id)}
+                            className={`p-4 text-start min-w-[210px] border-s border-black/5 dark:border-white/5 cursor-pointer transition ${
+                              isSelected ? 'bg-[#E32236]/10' : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.02]'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className={`font-bold text-base ${isSelected ? 'text-[#E32236]' : ''}`}>
+                                {offer.supplierName}
+                              </span>
+                              {!offer.reviewed && (
+                                <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-500 border border-amber-500/30 text-[11px] font-bold">
+                                  {t.notReviewedBadge}
+                                </span>
+                              )}
+                            </div>
+                            <div className={`text-xs font-mono-code mt-0.5 ${textMuted}`}>{offer.id}</div>
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-black/5 dark:divide-white/5 text-sm">
+                    <tr>
+                      <td className="p-4 font-semibold">{t.totalPrice}</td>
+                      {reqOffers.map((offer) => {
+                        const isCheapest = offer.reviewed && minPrice !== null && offer.totalPrice === minPrice;
+                        return (
+                          <td
+                            key={offer.id}
+                            onClick={() => setSelectedOffer(offer.id)}
+                            className={`p-4 font-mono-code border-s border-black/5 dark:border-white/5 cursor-pointer ${
+                              isCheapest ? 'bg-emerald-500/10' : ''
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg font-extrabold">
+                                {offer.totalPrice ? `$${offer.totalPrice.toLocaleString()} ${offer.currency}` : '-'}
+                              </span>
+                              {isCheapest && (
+                                <span className="px-2 py-0.5 rounded bg-emerald-500 text-white text-[10px] font-bold uppercase">
+                                  {t.cheapestBadge}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+
+                    <tr>
+                      <td className="p-4 font-semibold">{t.deliveryDuration}</td>
+                      {reqOffers.map((offer) => {
+                        const isFastest = offer.reviewed && minDays !== null && offer.deliveryDays === minDays;
+                        return (
+                          <td
+                            key={offer.id}
+                            onClick={() => setSelectedOffer(offer.id)}
+                            className={`p-4 font-mono-code border-s border-black/5 dark:border-white/5 cursor-pointer ${
+                              isFastest ? 'bg-sky-500/10' : ''
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold">
+                                {offer.deliveryDays ? `${offer.deliveryDays} ${t.daysUnit}` : '-'}
+                              </span>
+                              {isFastest && (
+                                <span className="px-2 py-0.5 rounded bg-sky-500 text-white text-[10px] font-bold uppercase">
+                                  {t.fastestBadge}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+
+                    <tr>
+                      <td className="p-4 font-semibold">{t.paymentTerms}</td>
+                      {reqOffers.map((offer) => (
+                        <td
+                          key={offer.id}
+                          onClick={() => setSelectedOffer(offer.id)}
+                          className="p-4 border-s border-black/5 dark:border-white/5 cursor-pointer"
+                        >
+                          {offer.paymentTerms && offer.paymentTerms.trim() ? offer.paymentTerms : '-'}
+                        </td>
+                      ))}
+                    </tr>
+
+                    <tr>
+                      <td className="p-4 font-semibold">{t.warrantyDuration}</td>
+                      {reqOffers.map((offer) => (
+                        <td
+                          key={offer.id}
+                          onClick={() => setSelectedOffer(offer.id)}
+                          className="p-4 font-mono-code border-s border-black/5 dark:border-white/5 cursor-pointer"
+                        >
+                          {offer.warrantyMonths ? `${offer.warrantyMonths} ${t.monthsUnit}` : '-'}
+                        </td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  // ==========================================================================
+  // SCREEN 04: REQUEST DETAILS (CENTRAL PROCUREMENT COMMAND VIEW + 3D TRACKER)
+  // ==========================================================================
+  const RequestDetailsScreen = () => {
+    const req = currentRequest;
+    const reqOffers = offers.filter((o) => o.requestId === req.id);
+    const reqAudit = auditLog.filter((a) => a.requestId === req.id).slice(0, 10);
+    const [rejectReason, setRejectReason] = useState('');
+    const [showRejectBox, setShowRejectBox] = useState(false);
+
+    const stages = ['Draft', 'Submitted', 'OffersReceived', 'Compared', 'PendingApproval', req.status === 'Rejected' ? 'Rejected' : 'Approved'];
+    const currentStageIdx = Math.max(0, stages.indexOf(req.status));
+    const [selectedStageIdx, setSelectedStageIdx] = useState(currentStageIdx);
+    const [use3DTracker, setUse3DTracker] = useState(true);
+
+    useEffect(() => {
+      setSelectedStageIdx(currentStageIdx);
+    }, [currentStageIdx, req.id]);
+
+    const updateRequestStatus = (nextStatus, logAction, logActionAr, logDetails, logDetailsAr) => {
+      setRequests((prev) =>
+        prev.map((r) => (r.id === req.id ? { ...r, status: nextStatus } : r))
+      );
+      addAuditEntry(logAction, logActionAr, req.id, logDetails, logDetailsAr);
+      showToast(isRtl ? logActionAr : logAction);
+    };
+
+    const handleDeleteDraft = () => {
+      setRequests((prev) => prev.filter((r) => r.id !== req.id));
+      addAuditEntry('Deleted Draft', 'حذف مسودة', req.id, `Deleted draft ${req.id}`, `تم حذف المسودة ${req.id}`);
+      setActiveScreen(2);
+      showToast(isRtl ? 'تم حذف المسودة' : 'Draft deleted.');
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-black/10 dark:border-white/10">
+          <div>
+            <button
+              onClick={() => setActiveScreen(2)}
+              className={`text-xs font-semibold flex items-center gap-1 mb-2 ${textMuted} hover:text-[#E32236]`}
+            >
+              {isRtl ? <ArrowRight className="w-3.5 h-3.5" /> : <ArrowLeft className="w-3.5 h-3.5" />}
+              {t.backToRequests}
+            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-mono-code text-lg font-extrabold text-[#E32236]">{req.id}</span>
+              <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">
+                {isRtl ? req.titleAr : req.title}
+              </h1>
+              <StatusBadge status={req.status} lang={lang} />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            {currentUser?.role === 'requester' && req.status === 'Draft' && (
+              <>
+                <button
+                  onClick={() =>
+                    updateRequestStatus(
+                      'Submitted',
+                      'Submitted Request',
+                      'إرسال طلب شراء',
+                      'Status changed from Draft -> Submitted',
+                      'تغيير الحالة من مسودة -> تم الإرسال'
+                    )
+                  }
+                  className="px-4 py-2 rounded-lg bg-[#E32236] hover:bg-[#C81B2D] text-white text-xs font-bold flex items-center gap-1.5"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  {t.submitRequest}
+                </button>
+                <button
+                  onClick={handleDeleteDraft}
+                  className="px-4 py-2 rounded-lg border border-[#E32236]/40 text-[#E32236] hover:bg-[#E32236]/10 text-xs font-bold flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {t.deleteDraft}
+                </button>
+              </>
+            )}
+
+            {currentUser?.role === 'officer' && (
+              <>
+                {(req.status === 'Submitted' || req.status === 'OffersReceived') && (
+                  <button
+                    onClick={() => setIsInviteModalOpen(true)}
+                    className={`px-4 py-2 rounded-lg border text-xs font-bold flex items-center gap-1.5 ${bgSurface} hover:border-[#E32236]`}
+                  >
+                    <Users className="w-3.5 h-3.5 text-[#E32236]" />
+                    {t.inviteSuppliers}
+                  </button>
+                )}
+                {reqOffers.length > 0 && (
+                  <button
+                    onClick={() => setActiveScreen(11)}
+                    className={`px-4 py-2 rounded-lg border text-xs font-bold flex items-center gap-1.5 ${bgSurface} hover:border-[#E32236]`}
+                  >
+                    <Layers className="w-3.5 h-3.5 text-[#E32236]" />
+                    {t.openComparison}
+                  </button>
+                )}
+                {(req.status === 'OffersReceived' || req.status === 'Compared') && reqOffers.length > 0 && (
+                  <button
+                    onClick={() =>
+                      updateRequestStatus(
+                        'PendingApproval',
+                        'Sent for Approval',
+                        'إرسال للاعتماد',
+                        `Status changed from ${req.status} -> Pending Approval`,
+                        'تم إرسال الطلب إلى المدير للاعتماد'
+                      )
+                    }
+                    className="px-4 py-2 rounded-lg bg-[#E32236] hover:bg-[#C81B2D] text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-[#E32236]/20"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    {t.sendForApproval}
+                  </button>
+                )}
+              </>
+            )}
+
+            {currentUser?.role === 'manager' && req.status === 'PendingApproval' && (
+              <>
+                <button
+                  onClick={() =>
+                    updateRequestStatus(
+                      'Approved',
+                      'Approved Request',
+                      'اعتماد الطلب',
+                      'Status changed from Pending Approval -> Approved',
+                      'تمت الموافقة الرسمية على الطلب'
+                    )
+                  }
+                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  {t.approveRequest}
+                </button>
+                <button
+                  onClick={() => setShowRejectBox(!showRejectBox)}
+                  className="px-4 py-2 rounded-lg bg-[#E32236] hover:bg-[#C81B2D] text-white text-xs font-bold flex items-center gap-1.5"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  {t.rejectRequest}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {showRejectBox && (
+          <div className={`p-4 rounded-xl border border-[#E32236] space-y-3 ${bgSurface}`}>
+            <label className="block text-xs font-bold text-[#E32236]">{t.rejectReasonLabel}</label>
+            <input
+              type="text"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder={t.rejectReasonPlaceholder}
+              className={`w-full px-3.5 py-2 rounded-lg border text-sm ${bgSubtle}`}
+            />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowRejectBox(false)} className="px-3 py-1.5 text-xs font-semibold">
+                {t.cancel}
+              </button>
+              <button
+                onClick={() => {
+                  if (!rejectReason.trim()) return;
+                  updateRequestStatus(
+                    'Rejected',
+                    'Rejected Request',
+                    'رفض الطلب',
+                    `Rejected: ${rejectReason}`,
+                    `مرفوض: ${rejectReason}`
+                  );
+                  setShowRejectBox(false);
+                }}
+                className="px-4 py-1.5 rounded-lg bg-[#E32236] text-white text-xs font-bold"
+              >
+                {t.rejectRequest}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* B. Interactive 6-Stage Workflow Timeline (3D Tracker + Classic 2D Toggle) */}
+        <div className={`p-5 rounded-xl border space-y-4 ${bgSurface}`}>
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-bold uppercase tracking-wider text-[#E32236]">
+              {t.workflowTimeline}
+            </div>
+            <button
+              onClick={() => setUse3DTracker(!use3DTracker)}
+              className={`px-3 py-1 rounded-lg border text-xs font-bold flex items-center gap-1.5 ${bgSubtle} hover:border-[#E32236]`}
+            >
+              <Box className="w-3.5 h-3.5 text-[#E32236]" />
+              <span>{use3DTracker ? t.viewClassic : t.view3d}</span>
+            </button>
+          </div>
+
+          {use3DTracker && (
+            <div className={`rounded-xl border overflow-hidden ${bgSubtle}`}>
+              <WorkflowStageThreeScene
+                theme={theme}
+                stages={stages}
+                currentStageIdx={currentStageIdx}
+                selectedStageIdx={selectedStageIdx}
+                onSelectStage={setSelectedStageIdx}
+              />
+              <div className={`px-4 py-2 border-t border-black/5 dark:border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs ${textMuted}`}>
+                <span>{t.clickStageHint}</span>
+                <span className="font-bold text-[#E32236]">
+                  0{selectedStageIdx + 1} — {t[`status_${stages[selectedStageIdx]}`]}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+            {stages.map((st, idx) => {
+              const isCompleted = idx <= currentStageIdx;
+              const isCurrent = idx === currentStageIdx;
+              const isInspected = idx === selectedStageIdx;
+              return (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setSelectedStageIdx(idx)}
+                  className={`p-3 rounded-lg border text-start transition ${
+                    isInspected
+                      ? 'border-[#E32236] bg-[#E32236]/10 ring-1 ring-[#E32236]'
+                      : isCompleted
+                      ? 'border-emerald-500/40 bg-emerald-500/5'
+                      : `${bgSubtle} opacity-60 hover:opacity-100`
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-mono-code text-[11px] font-bold">0{idx + 1}</span>
+                    {isCompleted && <CheckCircle2 className={`w-3.5 h-3.5 ${isCurrent ? 'text-[#E32236]' : 'text-emerald-500'}`} />}
+                  </div>
+                  <div className="text-xs font-bold truncate">{t[`status_${st}`]}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* A. Request Information + C. Supplier Offers Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className={`lg:col-span-5 p-6 rounded-xl border space-y-4 ${bgSurface}`}>
+            <h2 className="text-base font-bold border-b border-black/10 dark:border-white/10 pb-3">
+              {t.reqInfoSection}
+            </h2>
+            <p className={`text-sm leading-relaxed ${textMuted}`}>
+              {isRtl ? req.descriptionAr : req.description}
+            </p>
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <div className={`p-3 rounded-lg border ${bgSubtle}`}>
+                <span className={`text-[11px] uppercase ${textMuted}`}>{t.quantity}</span>
+                <p className="font-mono-code font-bold text-base mt-0.5">{req.quantity} {t.units}</p>
+              </div>
+              <div className={`p-3 rounded-lg border ${bgSubtle}`}>
+                <span className={`text-[11px] uppercase ${textMuted}`}>{t.estBudget}</span>
+                <p className="font-mono-code font-bold text-base text-[#E32236] mt-0.5">
+                  ${req.estimatedBudget.toLocaleString()}
+                </p>
+              </div>
+              <div className={`p-3 rounded-lg border ${bgSubtle}`}>
+                <span className={`text-[11px] uppercase ${textMuted}`}>{t.requesterLabel}</span>
+                <p className="font-semibold text-xs mt-0.5">{isRtl ? req.requesterNameAr : req.requesterName}</p>
+              </div>
+              <div className={`p-3 rounded-lg border ${bgSubtle}`}>
+                <span className={`text-[11px] uppercase ${textMuted}`}>{t.deliveryDateLabel}</span>
+                <p className="font-mono-code font-semibold text-xs mt-0.5">{req.deliveryDate || '—'}</p>
+              </div>
+            </div>
+            <div className={`p-3 rounded-lg border ${bgSubtle}`}>
+              <span className={`text-[11px] uppercase ${textMuted}`}>{t.reasonLabel}</span>
+              <p className="font-medium text-xs mt-0.5">{isRtl ? req.reasonAr : req.reason}</p>
+            </div>
+          </div>
+
+          <div className={`lg:col-span-7 p-6 rounded-xl border space-y-4 ${bgSurface}`}>
+            <div className="flex items-center justify-between border-b border-black/10 dark:border-white/10 pb-3">
+              <h2 className="text-base font-bold">{t.supplierOffersSection} ({reqOffers.length})</h2>
+            </div>
+
+            {reqOffers.length === 0 ? (
+              <div className={`p-10 rounded-lg border text-center text-sm ${bgSubtle} ${textMuted}`}>
+                {t.noOffersYet}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {reqOffers.map((offer) => (
+                  <div
+                    key={offer.id}
+                    className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${bgSubtle}`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm">{offer.supplierName}</span>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                            offer.reviewed
+                              ? 'bg-emerald-500/15 text-emerald-500'
+                              : 'bg-amber-500/15 text-amber-500'
+                          }`}
+                        >
+                          {offer.reviewed ? t.offerStatus_Reviewed : t.offerStatus_NotReviewed}
+                        </span>
+                      </div>
+                      <div className={`text-xs font-mono-code mt-1 flex items-center gap-1.5 ${textMuted}`}>
+                        <FileText className="w-3.5 h-3.5 text-[#E32236]" />
+                        {offer.fileName}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="text-end font-mono-code">
+                        <div className="font-extrabold text-sm">${offer.totalPrice.toLocaleString()}</div>
+                        <div className={`text-[11px] ${textMuted}`}>{offer.deliveryDays} {t.daysUnit}</div>
+                      </div>
+                      {(currentUser?.role === 'officer' || currentUser?.role === 'manager') && (
+                        <button
+                          onClick={() => {
+                            setSelectedOfferId(offer.id);
+                            setActiveScreen(10);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-[#E32236] hover:bg-[#C81B2D] text-white text-xs font-semibold flex items-center gap-1.5"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          {t.reviewWithAi}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className={`p-6 rounded-xl border ${bgSurface}`}>
+          <h2 className="text-base font-bold mb-4">{t.comparisonTitle}</h2>
+          <SupplierComparisonView requestId={req.id} standalone={false} />
+        </div>
+
+        <div className={`p-6 rounded-xl border ${bgSurface}`}>
+          <h2 className="text-base font-bold mb-4">{t.recentAuditActivity}</h2>
+          <div className="space-y-2.5">
+            {reqAudit.map((entry) => (
+              <div key={entry.id} className={`p-3 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs ${bgSubtle}`}>
+                <div className="flex items-center gap-2.5">
+                  <span className="font-mono-code text-[#E32236] font-bold">{entry.timestamp}</span>
+                  <span className="font-bold">{isRtl ? entry.userAr : entry.user}</span>
+                  <span className="px-2 py-0.5 rounded bg-black/5 dark:bg-white/5 font-semibold">
+                    {isRtl ? entry.actionAr : entry.action}
+                  </span>
+                </div>
+                <span className={textMuted}>{isRtl ? entry.detailsAr : entry.details}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ==========================================================================
+  // SCREEN 05: APPROVALS PAGE (MANAGER / APPROVER ONLY)
+  // ==========================================================================
+  const ApprovalsScreen = () => {
+    const pendingReqs = requests.filter((r) => r.status === 'PendingApproval');
+    const [confirmTarget, setConfirmTarget] = useState(null);
+    const [rejectTarget, setRejectTarget] = useState(null);
+    const [rejectReason, setRejectReason] = useState('');
+
+    const executeApprove = (req) => {
+      setRequests((prev) => prev.map((r) => (r.id === req.id ? { ...r, status: 'Approved' } : r)));
+      addAuditEntry(
+        'Approved Request',
+        'اعتماد طلب الشراء',
+        req.id,
+        `Executive approval granted for ${req.id}`,
+        `تمت الموافقة التنفيذية على الطلب ${req.id}`
+      );
+      setConfirmTarget(null);
+      showToast(isRtl ? 'تم اعتماد طلب الشراء بنجاح' : `Request ${req.id} formally approved.`);
+    };
+
+    const executeReject = (req) => {
+      if (!rejectReason.trim()) return;
+      setRequests((prev) => prev.map((r) => (r.id === req.id ? { ...r, status: 'Rejected' } : r)));
+      addAuditEntry(
+        'Rejected Request',
+        'رفض طلب الشراء',
+        req.id,
+        `Rejected ${req.id} — Reason: ${rejectReason}`,
+        `تم رفض الطلب ${req.id} — السبب: ${rejectReason}`
+      );
+      setRejectTarget(null);
+      setRejectReason('');
+      showToast(isRtl ? 'تم رفض الطلب وتسجيل السبب' : `Request ${req.id} rejected.`);
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="pb-5 border-b border-black/10 dark:border-white/10">
+          <div className="text-xs font-bold uppercase tracking-widest text-[#E32236] mb-1">
+            05 // EXECUTIVE AUTHORIZATION QUEUE
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight">{t.approvalsTitle}</h1>
+          <p className={`text-sm mt-1 ${textMuted}`}>{t.approvalsSub}</p>
+        </div>
+
+        {pendingReqs.length === 0 ? (
+          <div className={`p-16 rounded-xl border text-center ${bgSurface}`}>
+            <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
+            <p className="font-bold text-base">{t.noPendingApprovals}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-5">
+            {pendingReqs.map((req) => {
+              const reqOffers = offers.filter((o) => o.requestId === req.id);
+              const bestOffer = reqOffers.length
+                ? [...reqOffers].sort((a, b) => a.totalPrice - b.totalPrice)[0]
+                : null;
+
+              return (
+                <div key={req.id} className={`p-6 rounded-xl border flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${bgSurface}`}>
+                  <div className="space-y-2 max-w-2xl">
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono-code font-bold text-[#E32236]">{req.id}</span>
+                      <StatusBadge status={req.status} lang={lang} />
+                      <span className={`text-xs font-mono-code ${textMuted}`}>{t.submissionDate}: {req.createdDate}</span>
+                    </div>
+                    <h2 className="text-xl font-extrabold">{isRtl ? req.titleAr : req.title}</h2>
+                    <p className={`text-xs ${textMuted}`}>{isRtl ? req.descriptionAr : req.description}</p>
+                  </div>
+
+                  <div className={`p-4 rounded-xl border grid grid-cols-2 sm:grid-cols-3 gap-4 shrink-0 ${bgSubtle}`}>
+                    <div>
+                      <span className={`text-[10px] uppercase font-bold ${textMuted}`}>{t.estBudget}</span>
+                      <div className="font-mono-code font-bold text-sm mt-0.5">${req.estimatedBudget.toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <span className={`text-[10px] uppercase font-bold ${textMuted}`}>{t.recommendedOffer}</span>
+                      <div className="font-bold text-xs mt-0.5 text-emerald-500">
+                        {bestOffer ? bestOffer.supplierName : 'Prime Solutions'}
+                      </div>
+                    </div>
+                    <div>
+                      <span className={`text-[10px] uppercase font-bold ${textMuted}`}>{t.recommendedPrice}</span>
+                      <div className="font-mono-code font-extrabold text-base text-[#E32236]">
+                        ${(bestOffer ? bestOffer.totalPrice : 37400).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                    <button
+                      onClick={() => {
+                        setSelectedRequestId(req.id);
+                        setActiveScreen(4);
+                      }}
+                      className={`px-3.5 py-2.5 rounded-lg border text-xs font-bold ${bgSubtle} hover:border-[#E32236]`}
+                    >
+                      {t.viewDetails}
+                    </button>
+                    <button
+                      onClick={() => setConfirmTarget(req)}
+                      className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5"
+                    >
+                      <Check className="w-4 h-4" />
+                      {t.approve}
+                    </button>
+                    <button
+                      onClick={() => setRejectTarget(req)}
+                      className="px-4 py-2.5 rounded-lg bg-[#E32236] hover:bg-[#C81B2D] text-white text-xs font-bold flex items-center gap-1.5"
+                    >
+                      <X className="w-4 h-4" />
+                      {t.reject}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {confirmTarget && (
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className={`w-full max-w-md rounded-2xl border p-6 space-y-4 ${bgSurface}`}>
+              <h3 className="text-lg font-extrabold">{t.confirmApprovalTitle}</h3>
+              <p className={`text-sm ${textMuted}`}>{t.confirmApprovalMsg}</p>
+              <div className={`p-3 rounded-lg border text-xs font-mono-code ${bgSubtle}`}>
+                {confirmTarget.id} — {isRtl ? confirmTarget.titleAr : confirmTarget.title}
+              </div>
+              <div className="flex justify-end gap-2.5 pt-2">
+                <button onClick={() => setConfirmTarget(null)} className={`px-4 py-2 rounded-lg border text-xs font-semibold ${bgSubtle}`}>
+                  {t.cancel}
+                </button>
+                <button
+                  onClick={() => executeApprove(confirmTarget)}
+                  className="px-5 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold"
+                >
+                  {t.approve}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {rejectTarget && (
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className={`w-full max-w-md rounded-2xl border p-6 space-y-4 ${bgSurface}`}>
+              <h3 className="text-lg font-extrabold text-[#E32236]">{t.rejectModalTitle}</h3>
+              <div>
+                <label className="block text-xs font-bold mb-1.5">{t.rejectReasonLabel} *</label>
+                <textarea
+                  rows={3}
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder={t.rejectReasonPlaceholder}
+                  className={`w-full px-3.5 py-2 rounded-lg border text-sm outline-none focus:border-[#E32236] ${bgSubtle}`}
+                />
+              </div>
+              <div className="flex justify-end gap-2.5 pt-2">
+                <button
+                  onClick={() => {
+                    setRejectTarget(null);
+                    setRejectReason('');
+                  }}
+                  className={`px-4 py-2 rounded-lg border text-xs font-semibold ${bgSubtle}`}
+                >
+                  {t.cancel}
+                </button>
+                <button
+                  onClick={() => executeReject(rejectTarget)}
+                  disabled={!rejectReason.trim()}
+                  className="px-5 py-2 rounded-lg bg-[#E32236] text-white text-xs font-bold disabled:opacity-50"
+                >
+                  {t.reject}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ==========================================================================
+  // SCREEN 06: AUDIT LOG (READ-ONLY TRANSPARENCY LEDGER)
+  // ==========================================================================
+  const AuditLogScreen = () => {
+    const [userFilter, setUserFilter] = useState('ALL');
+    const [actionFilter, setActionFilter] = useState('ALL');
+    const [reqFilter, setReqFilter] = useState('ALL');
+
+    const uniqueUsers = useMemo(() => [...new Set(auditLog.map((a) => a.user))], [auditLog]);
+    const uniqueActions = useMemo(() => [...new Set(auditLog.map((a) => a.action))], [auditLog]);
+    const uniqueReqs = useMemo(() => [...new Set(auditLog.map((a) => a.requestId))], [auditLog]);
+
+    const filteredLogs = useMemo(() => {
+      return auditLog.filter((item) => {
+        if (userFilter !== 'ALL' && item.user !== userFilter) return false;
+        if (actionFilter !== 'ALL' && item.action !== actionFilter) return false;
+        if (reqFilter !== 'ALL' && item.requestId !== reqFilter) return false;
+        return true;
+      });
+    }, [auditLog, userFilter, actionFilter, reqFilter]);
+
+    return (
+      <div className="space-y-6">
+        <div className="pb-5 border-b border-black/10 dark:border-white/10">
+          <div className="text-xs font-bold uppercase tracking-widest text-[#E32236] mb-1">
+            06 // IMMUTABLE GOVERNANCE LEDGER
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight">{t.auditLogTitle}</h1>
+          <p className={`text-sm mt-1 ${textMuted}`}>{t.auditLogSub}</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <select
+            value={userFilter}
+            onChange={(e) => setUserFilter(e.target.value)}
+            className={`px-3.5 py-2.5 rounded-lg border text-xs font-semibold outline-none ${bgSurface}`}
+          >
+            <option value="ALL">{t.allUsers}</option>
+            {uniqueUsers.map((u) => (
+              <option key={u} value={u}>{u}</option>
+            ))}
+          </select>
+
+          <select
+            value={actionFilter}
+            onChange={(e) => setActionFilter(e.target.value)}
+            className={`px-3.5 py-2.5 rounded-lg border text-xs font-semibold outline-none ${bgSurface}`}
+          >
+            <option value="ALL">{t.allActions}</option>
+            {uniqueActions.map((ac) => (
+              <option key={ac} value={ac}>{ac}</option>
+            ))}
+          </select>
+
+          <select
+            value={reqFilter}
+            onChange={(e) => setReqFilter(e.target.value)}
+            className={`px-3.5 py-2.5 rounded-lg border text-xs font-semibold outline-none ${bgSurface}`}
+          >
+            <option value="ALL">{t.allRequestsFilter}</option>
+            {uniqueReqs.map((rq) => (
+              <option key={rq} value={rq}>{rq}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className={`rounded-xl border overflow-hidden ${bgSurface}`}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-start border-collapse">
+              <thead>
+                <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${bgSubtle} ${textMuted}`}>
+                  <th className="py-3.5 px-5 text-start">{t.timestamp}</th>
+                  <th className="py-3.5 px-5 text-start">{t.userCol}</th>
+                  <th className="py-3.5 px-5 text-start">{t.actionCol}</th>
+                  <th className="py-3.5 px-5 text-start">{t.reqId}</th>
+                  <th className="py-3.5 px-5 text-start">{t.detailsCol}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-black/5 dark:divide-white/5 text-xs">
+                {filteredLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
+                    <td className="py-3.5 px-5 font-mono-code text-[#E32236] font-semibold whitespace-nowrap">
+                      {log.timestamp}
+                    </td>
+                    <td className="py-3.5 px-5 font-bold whitespace-nowrap">
+                      {isRtl ? log.userAr : log.user}
+                    </td>
+                    <td className="py-3.5 px-5 whitespace-nowrap">
+                      <span className={`px-2.5 py-1 rounded border font-semibold ${bgSubtle}`}>
+                        {isRtl ? log.actionAr : log.action}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-5 font-mono-code font-bold">{log.requestId}</td>
+                    <td className={`py-3.5 px-5 ${textMuted}`}>{isRtl ? log.detailsAr : log.details}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ==========================================================================
+  // SCREEN 07: SUPPLIER REQUESTS (SUPPLIER ONLY — NO INTERNAL BUDGETS)
+  // ==========================================================================
+  const SupplierRequestsScreen = () => {
+    const supplierId = currentUser?.supplierId || 'SUP-01';
+    const invitedReqs = requests.filter((r) => r.invitedSupplierIds?.includes(supplierId));
+
+    return (
+      <div className="space-y-6">
+        <div className="pb-5 border-b border-black/10 dark:border-white/10">
+          <div className="text-xs font-bold uppercase tracking-widest text-[#E32236] mb-1">
+            07 // VENDOR TENDER PORTAL — {isRtl ? 'شركة تك سبلاي المحدودة' : 'TECHSUPPLY LTD.'}
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight">{t.supplierPortalTitle}</h1>
+          <p className={`text-sm mt-1 ${textMuted}`}>{t.supplierPortalSub}</p>
+        </div>
+
+        {invitedReqs.length === 0 ? (
+          <div className={`p-16 rounded-xl border text-center ${bgSurface}`}>
+            <Building2 className={`w-10 h-10 mx-auto mb-3 ${textMuted}`} />
+            <p className="font-bold text-base">{t.noSupplierRequests}</p>
+          </div>
+        ) : (
+          <div className={`rounded-xl border overflow-hidden ${bgSurface}`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-start border-collapse">
+                <thead>
+                  <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${bgSubtle} ${textMuted}`}>
+                    <th className="py-3.5 px-5 text-start">{t.reqTitle}</th>
+                    <th className="py-3.5 px-5 text-start">{t.quantity}</th>
+                    <th className="py-3.5 px-5 text-start">{t.deadlineCol}</th>
+                    <th className="py-3.5 px-5 text-start">{t.myOfferStatus}</th>
+                    <th className="py-3.5 px-5 text-end"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-white/5 text-sm">
+                  {invitedReqs.map((req) => {
+                    const hasSubmitted = offers.some(
+                      (o) => o.requestId === req.id && o.supplierId === supplierId
+                    );
+                    return (
+                      <tr
+                        key={req.id}
+                        onClick={() => {
+                          setSelectedRequestId(req.id);
+                          setActiveScreen(8);
+                        }}
+                        className="cursor-pointer transition hover:bg-[#E32236]/[0.04]"
+                      >
+                        <td className="py-4 px-5">
+                          <span className="font-mono-code text-xs font-bold text-[#E32236] block mb-0.5">
+                            {req.id}
+                          </span>
+                          <span className="font-bold">{isRtl ? req.titleAr : req.title}</span>
+                        </td>
+                        <td className="py-4 px-5 font-mono-code font-semibold">
+                          {req.quantity} {t.units}
+                        </td>
+                        <td className="py-4 px-5 font-mono-code text-xs">{req.deliveryDate}</td>
+                        <td className="py-4 px-5">
+                          <span
+                            className={`px-2.5 py-1 rounded text-xs font-bold border ${
+                              hasSubmitted
+                                ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
+                                : 'bg-amber-500/15 text-amber-500 border-amber-500/30'
+                            }`}
+                          >
+                            {hasSubmitted ? t.offerSubmitted : t.offerNotSubmitted}
+                          </span>
+                        </td>
+                        <td className="py-4 px-5 text-end">
+                          <span className="text-xs font-bold text-[#E32236] inline-flex items-center gap-1">
+                            {t.uploadQuotationBtn}
+                            {isRtl ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ==========================================================================
+  // SCREEN 08: SUPPLIER REQUEST DETAILS & CLEAN PDF QUOTATION UPLOAD
+  // ==========================================================================
+  const SupplierUploadScreen = () => {
+    const supplierId = currentUser?.supplierId || 'SUP-01';
+    const invitedReqs = requests.filter((r) => r.invitedSupplierIds?.includes(supplierId));
+    const req = invitedReqs.find((r) => r.id === selectedRequestId) || invitedReqs[0] || requests[2];
+    const existingOffer = offers.find((o) => o.requestId === req.id && o.supplierId === supplierId);
+
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [uploadState, setUploadState] = useState(existingOffer ? 'success' : 'idle');
+    const [progress, setProgress] = useState(existingOffer ? 100 : 0);
+    const [errorMsg, setErrorMsg] = useState('');
+    const [forceFail, setForceFail] = useState(false);
+    const fileInputRef = useRef(null);
+
+    const handleFileChosen = (file) => {
+      if (!file) return;
+      setErrorMsg('');
+      if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+        setUploadState('error');
+        setErrorMsg(t.uploadErrorPdfOnly);
+        return;
+      }
+      setSelectedFile(file);
+      setUploadState('idle');
+      setProgress(0);
+    };
+
+    const startUpload = () => {
+      const fileNameToUse = selectedFile ? selectedFile.name : `TechSupply_Quote_${req.id}.pdf`;
+      setUploadState('uploading');
+      setProgress(15);
+      setErrorMsg('');
+
+      let p = 15;
+      const timer = setInterval(() => {
+        p += 25;
+        setProgress(Math.min(p, 95));
+        if (p >= 95) {
+          clearInterval(timer);
+          if (forceFail) {
+            setUploadState('error');
+            setErrorMsg(t.uploadErrorGeneric);
+          } else {
+            setProgress(100);
+            setUploadState('success');
+            const newOffer = {
+              id: `OFF-${Math.floor(300 + Math.random() * 600)}`,
+              requestId: req.id,
+              supplierId,
+              supplierName: 'TechSupply Ltd.',
+              fileName: fileNameToUse,
+              uploadedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+              extractionStatus: 'Completed',
+              reviewed: false,
+              totalPrice: 31500,
+              currency: 'USD',
+              deliveryDays: 10,
+              paymentTerms: 'Net 30',
+              warrantyMonths: 24,
+              notes: 'Uploaded via PROCURA Supplier Portal.'
+            };
+            setOffers((prev) => {
+              const filtered = prev.filter((o) => !(o.requestId === req.id && o.supplierId === supplierId));
+              return [...filtered, newOffer];
+            });
+            setRequests((prev) =>
+              prev.map((r) => (r.id === req.id && r.status === 'Submitted' ? { ...r, status: 'OffersReceived' } : r))
+            );
+            addAuditEntry(
+              'Uploaded Quotation',
+              'رفع عرض سعر',
+              req.id,
+              `TechSupply Ltd. uploaded ${fileNameToUse}`,
+              `قامت شركة تك سبلاي برفع الملف ${fileNameToUse}`
+            );
+            showToast(t.uploadSuccessMsg);
+          }
+        }
+      }, 220);
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-black/10 dark:border-white/10">
+          <div>
+            <button
+              onClick={() => setActiveScreen(7)}
+              className={`text-xs font-semibold flex items-center gap-1 mb-2 ${textMuted} hover:text-[#E32236]`}
+            >
+              {isRtl ? <ArrowRight className="w-3.5 h-3.5" /> : <ArrowLeft className="w-3.5 h-3.5" />}
+              {t.navSupplierRequests}
+            </button>
+            <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">{t.uploadQuotationTitle}</h1>
+          </div>
+
+          <label className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs cursor-pointer ${bgSurface}`}>
+            <input
+              type="checkbox"
+              checked={forceFail}
+              onChange={(e) => setForceFail(e.target.checked)}
+              className="accent-[#E32236]"
+            />
+            <span>{t.simulateUploadFail}</span>
+          </label>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left: Tender Specifications (STRICTLY NO INTERNAL BUDGET DISPLAYED) */}
+          <div className={`lg:col-span-5 p-6 rounded-xl border space-y-4 ${bgSurface}`}>
+            <div className="flex items-center justify-between">
+              <span className="font-mono-code font-bold text-[#E32236]">{req.id}</span>
+              <span className={`text-xs font-mono-code ${textMuted}`}>{t.deadlineCol}: {req.deliveryDate}</span>
+            </div>
+            <h2 className="text-xl font-extrabold">{isRtl ? req.titleAr : req.title}</h2>
+            <p className={`text-sm leading-relaxed ${textMuted}`}>
+              {isRtl ? req.descriptionAr : req.description}
+            </p>
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className={`p-3 rounded-lg border ${bgSubtle}`}>
+                <span className={`text-[11px] uppercase ${textMuted}`}>{t.quantity}</span>
+                <p className="font-mono-code font-bold text-base mt-0.5">{req.quantity} {t.units}</p>
+              </div>
+              <div className={`p-3 rounded-lg border ${bgSubtle}`}>
+                <span className={`text-[11px] uppercase ${textMuted}`}>{t.deliveryDateLabel}</span>
+                <p className="font-mono-code font-bold text-sm mt-0.5">{req.deliveryDate}</p>
+              </div>
+            </div>
+            <div className={`p-3 rounded-lg border text-xs flex items-center gap-2 ${bgSubtle} ${textMuted}`}>
+              <Lock className="w-4 h-4 text-[#E32236] shrink-0" />
+              <span>{t.budgetConfidentialNote}</span>
+            </div>
+          </div>
+
+          {/* Right: Clean Drag-and-Drop PDF Uploader */}
+          <div className={`lg:col-span-7 p-6 rounded-xl border space-y-5 ${bgSurface}`}>
+            <div
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (e.dataTransfer.files?.[0]) handleFileChosen(e.dataTransfer.files[0]);
+              }}
+              className={`p-10 rounded-xl border-2 border-dashed text-center transition ${
+                uploadState === 'error'
+                  ? 'border-[#E32236] bg-[#E32236]/5'
+                  : 'border-black/15 dark:border-white/15 hover:border-[#E32236]'
+              }`}
+            >
+              <Upload className="w-10 h-10 text-[#E32236] mx-auto mb-3" />
+              <p className="font-bold text-base">{t.uploadAreaTitle}</p>
+              <p className={`text-xs mt-1 mb-5 ${textMuted}`}>{t.uploadAreaSub}</p>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,application/pdf"
+                onChange={(e) => handleFileChosen(e.target.files?.[0])}
+                className="hidden"
+              />
+
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`px-4 py-2.5 rounded-lg border text-xs font-bold ${bgSurface} hover:border-[#E32236]`}
+                >
+                  {t.browseFiles}
+                </button>
+                <button
+                  type="button"
+                  onClick={startUpload}
+                  disabled={uploadState === 'uploading'}
+                  className="px-6 py-2.5 rounded-lg bg-[#E32236] hover:bg-[#C81B2D] text-white text-xs font-bold shadow-lg shadow-[#E32236]/20"
+                >
+                  {t.uploadQuotationBtn}
+                </button>
+              </div>
+            </div>
+
+            {uploadState === 'uploading' && (
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span>{t.uploadingText}</span>
+                  <span className="font-mono-code">{progress}%</span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+                  <div className="h-full bg-[#E32236] transition-all" style={{ width: `${progress}%` }} />
+                </div>
+              </div>
+            )}
+
+            {uploadState === 'error' && (
+              <div className="p-3.5 rounded-lg bg-[#E32236]/10 border border-[#E32236]/40 text-[#E32236] text-xs flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 font-semibold">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{errorMsg}</span>
+                </div>
+                <button
+                  onClick={startUpload}
+                  className="px-3 py-1 rounded bg-[#E32236] text-white font-bold shrink-0"
+                >
+                  {t.retry}
+                </button>
+              </div>
+            )}
+
+            {uploadState === 'success' && (
+              <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 text-xs flex items-center justify-between">
+                <div className="flex items-center gap-2 font-bold">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>{t.uploadSuccessMsg}</span>
+                </div>
+                <span className="font-mono-code font-semibold">
+                  {selectedFile?.name || existingOffer?.fileName || `TechSupply_Quote_${req.id}.pdf`}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ==========================================================================
+  // SCREEN 09: SUPPLIER INVITATION MODAL (PROCUREMENT OFFICER)
+  // ==========================================================================
+  const SupplierInvitationModal = () => {
+    if (!isInviteModalOpen) return null;
+    const req = currentRequest;
+    const [selectedIds, setSelectedIds] = useState(
+      req.invitedSupplierIds?.length ? req.invitedSupplierIds : ['SUP-01', 'SUP-02', 'SUP-03']
+    );
+    const [error, setError] = useState('');
+
+    const toggleSupplier = (id) => {
+      setError('');
+      setSelectedIds((prev) =>
+        prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      );
+    };
+
+    const handleSendInvitations = () => {
+      if (selectedIds.length === 0) {
+        setError(t.selectAtLeastOne);
+        return;
+      }
+      setRequests((prev) =>
+        prev.map((r) => (r.id === req.id ? { ...r, invitedSupplierIds: selectedIds } : r))
+      );
+      const names = REGISTERED_SUPPLIERS.filter((s) => selectedIds.includes(s.id))
+        .map((s) => s.name)
+        .join(', ');
+      addAuditEntry(
+        'Invited Suppliers',
+        'دعوة موردين',
+        req.id,
+        `Invited ${selectedIds.length} suppliers: ${names}`,
+        `تمت دعوة ${selectedIds.length} موردين لتقديم عروضهم`
+      );
+      setIsInviteModalOpen(false);
+      showToast(
+        isRtl
+          ? `تم إرسال الدعوات إلى ${selectedIds.length} موردين بنجاح`
+          : `Dispatched sourcing invitations to ${selectedIds.length} suppliers.`
+      );
+    };
+
+    return (
+      <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className={`w-full max-w-lg rounded-2xl border p-6 lg:p-7 shadow-2xl space-y-5 ${bgSurface}`}>
+          <div className="flex items-start justify-between gap-4 border-b border-black/10 dark:border-white/10 pb-4">
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-widest text-[#E32236] mb-1">
+                09 // VENDOR DISPATCH — {req.id}
+              </div>
+              <h3 className="text-xl font-extrabold">{t.inviteModalTitle}</h3>
+              <p className={`text-xs mt-1 ${textMuted}`}>{t.inviteModalSub}</p>
+            </div>
+            <button onClick={() => setIsInviteModalOpen(false)} className={`p-1.5 rounded-lg ${bgSubtle}`}>
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="space-y-2.5">
+            {REGISTERED_SUPPLIERS.map((sup) => {
+              const checked = selectedIds.includes(sup.id);
+              return (
+                <label
+                  key={sup.id}
+                  onClick={() => toggleSupplier(sup.id)}
+                  className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition ${
+                    checked ? 'border-[#E32236] bg-[#E32236]/[0.06]' : bgSubtle
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-5 h-5 rounded flex items-center justify-center border ${
+                        checked ? 'bg-[#E32236] border-[#E32236] text-white' : 'border-slate-500'
+                      }`}
+                    >
+                      {checked && <Check className="w-3.5 h-3.5" />}
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm">{isRtl ? sup.nameAr : sup.name}</div>
+                      <div className={`text-xs ${textMuted}`}>{isRtl ? sup.categoryAr : sup.category}</div>
+                    </div>
+                  </div>
+                  <span className="font-mono-code text-xs font-bold text-amber-500">★ {sup.rating}</span>
+                </label>
+              );
+            })}
+          </div>
+
+          {error && (
+            <div className="p-2.5 rounded-lg bg-[#E32236]/10 border border-[#E32236]/40 text-[#E32236] text-xs font-semibold">
+              {error}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-3 border-t border-black/10 dark:border-white/10">
+            <div className="text-xs font-bold">
+              {t.selectedCount}: <span className="text-[#E32236] font-mono-code text-sm">{selectedIds.length}</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsInviteModalOpen(false)}
+                className={`px-4 py-2 rounded-lg border text-xs font-semibold ${bgSubtle}`}
+              >
+                {t.cancel}
+              </button>
+              <button
+                type="button"
+                onClick={handleSendInvitations}
+                className="px-5 py-2 rounded-lg bg-[#E32236] hover:bg-[#C81B2D] text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-[#E32236]/20"
+              >
+                <Send className="w-3.5 h-3.5" />
+                {t.sendInvitations}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ==========================================================================
+  // SCREEN 10: AI EXTRACTION REVIEW (INTERACTIVE 3D DOCUMENT INSPECTOR)
+  // ==========================================================================
+  const AiExtractionScreen = () => {
+    const offer = offers.find((o) => o.id === selectedOfferId) || offers[3] || offers[0];
+    const [aiStatus, setAiStatus] = useState(offer.extractionStatus || 'Completed');
+    const [activeField, setActiveField] = useState(null);
+    const [use3DInspector, setUse3DInspector] = useState(true);
+    const [form, setForm] = useState({
+      supplierName: offer.supplierName || '',
+      totalPrice: offer.totalPrice ?? '',
+      currency: offer.currency || 'USD',
+      deliveryDays: offer.deliveryDays ?? '',
+      paymentTerms: offer.paymentTerms || '',
+      warrantyMonths: offer.warrantyMonths ?? '',
+      notes: offer.notes || ''
+    });
+
+    useEffect(() => {
+      setForm({
+        supplierName: offer.supplierName || '',
+        totalPrice: offer.totalPrice ?? '',
+        currency: offer.currency || 'USD',
+        deliveryDays: offer.deliveryDays ?? '',
+        paymentTerms: offer.paymentTerms || '',
+        warrantyMonths: offer.warrantyMonths ?? '',
+        notes: offer.notes || ''
+      });
+      setAiStatus(offer.extractionStatus || 'Completed');
+    }, [offer]);
+
+    const handleRetryAi = () => {
+      setAiStatus('Processing');
+      setTimeout(() => {
+        setAiStatus('Completed');
+      }, 1100);
+    };
+
+    const handleSaveApprove = (e) => {
+      e.preventDefault();
+      setOffers((prev) =>
+        prev.map((o) =>
+          o.id === offer.id
+            ? {
+                ...o,
+                supplierName: form.supplierName,
+                totalPrice: Number(form.totalPrice) || 0,
+                currency: form.currency,
+                deliveryDays: Number(form.deliveryDays) || 0,
+                paymentTerms: form.paymentTerms,
+                warrantyMonths: Number(form.warrantyMonths) || 0,
+                notes: form.notes,
+                extractionStatus: 'Completed',
+                reviewed: true
+              }
+            : o
+        )
+      );
+      addAuditEntry(
+        'Verified AI Extraction',
+        'اعتماد استخراج البيانات',
+        offer.requestId,
+        `Verified offer ${offer.id} (${form.supplierName}): $${Number(form.totalPrice).toLocaleString()}, ${form.deliveryDays}d, Terms: ${form.paymentTerms || 'N/A'}`,
+        `تم اعتماد بيانات العرض ${offer.id} (${form.supplierName})`
+      );
+      setSelectedRequestId(offer.requestId);
+      setActiveScreen(4);
+      showToast(isRtl ? 'تم حفظ واعتماد البيانات المستخرجة بنجاح' : 'AI extraction verified and saved to comparison matrix.');
+    };
+
+    const openSimulatedPdf = () => {
+      const pdfWindow = window.open('', '_blank');
+      if (pdfWindow) {
+        pdfWindow.document.write(`
+          <html><head><title>${offer.fileName}</title></head>
+          <body style="font-family:sans-serif;padding:40px;background:#f4f5f7;color:#111;">
+            <div style="max-width:720px;margin:auto;background:#fff;padding:40px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.1);">
+              <h2 style="color:#E32236;margin-top:0;">PROCURA — SOURCE QUOTATION PDF PREVIEW</h2>
+              <p><strong>Document:</strong> ${offer.fileName}</p>
+              <p><strong>Vendor:</strong> ${offer.supplierName}</p>
+              <p><strong>Reference Request:</strong> ${offer.requestId}</p>
+              <hr/>
+              <p><strong>Total Quoted Amount:</strong> $${offer.totalPrice} ${offer.currency}</p>
+              <p><strong>Estimated Delivery:</strong> ${offer.deliveryDays} Calendar Days</p>
+              <p><strong>Warranty Coverage:</strong> ${offer.warrantyMonths} Months</p>
+              <p><strong>Commercial Notes:</strong> ${offer.notes}</p>
+            </div>
+          </body></html>
+        `);
+        pdfWindow.document.close();
+      }
+    };
+
+    const hasMissing = !form.paymentTerms.trim() || !form.totalPrice || !form.deliveryDays;
+
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 pb-5 border-b border-black/10 dark:border-white/10">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-widest text-[#E32236] mb-1">
+              10 // DOCUMENT INTELLIGENCE & HUMAN VERIFICATION
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight">{t.aiReviewTitle}</h1>
+            <p className={`text-sm mt-1 ${textMuted}`}>{t.aiReviewSub}</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className={`flex items-center gap-1 p-1 rounded-lg border text-xs ${bgSurface}`}>
+              <span className={`px-2 font-medium ${textMuted}`}>{t.simulateAiState}</span>
+              {['Processing', 'Completed', 'Failed'].map((st) => (
+                <button
+                  key={st}
+                  onClick={() => setAiStatus(st)}
+                  className={`px-2.5 py-1 rounded font-semibold transition ${
+                    aiStatus === st ? 'bg-[#E32236] text-white' : `${textMuted} hover:text-[#E32236]`
+                  }`}
+                >
+                  {t[`status_${st}`]}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={openSimulatedPdf}
+              className={`px-4 py-2 rounded-lg border text-xs font-bold flex items-center gap-1.5 ${bgSurface} hover:border-[#E32236]`}
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-[#E32236]" />
+              {t.openQuotationPdf}
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className={`lg:col-span-5 p-6 rounded-xl border flex flex-col justify-between ${bgSurface}`}>
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <span className="font-mono-code text-xs font-bold text-[#E32236] truncate">{offer.fileName}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setUse3DInspector(!use3DInspector)}
+                    className={`px-2.5 py-1 rounded border text-[11px] font-bold flex items-center gap-1 ${bgSubtle} hover:border-[#E32236]`}
+                  >
+                    <Box className="w-3 h-3 text-[#E32236]" />
+                    <span>{use3DInspector ? t.viewClassic : t.view3d}</span>
+                  </button>
+                  <span
+                    className={`px-2.5 py-0.5 rounded text-xs font-bold ${
+                      aiStatus === 'Completed'
+                        ? 'bg-emerald-500/15 text-emerald-500'
+                        : aiStatus === 'Processing'
+                        ? 'bg-amber-500/15 text-amber-500'
+                        : 'bg-[#E32236]/15 text-[#E32236]'
+                    }`}
+                  >
+                    {t[`status_${aiStatus}`]}
+                  </span>
+                </div>
+              </div>
+
+              {use3DInspector ? (
+                <div className={`rounded-xl border overflow-hidden ${bgSubtle}`}>
+                  <AiExtractionThreeScene
+                    theme={theme}
+                    extractionStatus={aiStatus}
+                    hasMissingField={hasMissing}
+                    activeField={activeField}
+                  />
+                  <div className={`px-3.5 py-2 border-t border-black/5 dark:border-white/5 text-[11px] ${textMuted}`}>
+                    {t.hoverFieldHint}
+                  </div>
+                </div>
+              ) : (
+                <div className={`p-5 rounded-xl border space-y-2.5 text-xs font-mono-code ${bgSubtle}`}>
+                  <div className="font-bold text-[#E32236]">QUOTATION EXTRACT SNAPSHOT</div>
+                  <div>VENDOR: {form.supplierName || '—'}</div>
+                  <div>AMOUNT: ${form.totalPrice || '0'} {form.currency}</div>
+                  <div>DELIVERY: {form.deliveryDays || '0'} DAYS</div>
+                  <div>WARRANTY: {form.warrantyMonths || '0'} MONTHS</div>
+                  <div>TERMS: {form.paymentTerms || '[MISSING]'}</div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-black/10 dark:border-white/10">
+              <div className={`text-[11px] font-bold uppercase mb-2 ${textMuted}`}>
+                {isRtl ? 'تبديل عرض السعر للمراجعة:' : 'INSPECT QUOTATION RECORD:'}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {offers.slice(0, 5).map((o) => (
+                  <button
+                    key={o.id}
+                    onClick={() => setSelectedOfferId(o.id)}
+                    className={`px-2.5 py-1 rounded border text-xs font-mono-code font-semibold ${
+                      o.id === offer.id ? 'border-[#E32236] bg-[#E32236]/10 text-[#E32236]' : bgSubtle
+                    }`}
+                  >
+                    {o.id} ({o.supplierName.split(' ')[0]})
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className={`lg:col-span-7 p-6 lg:p-8 rounded-xl border ${bgSurface}`}>
+            {aiStatus === 'Processing' ? (
+              <div className="py-20 text-center space-y-3">
+                <RefreshCw className="w-10 h-10 text-[#E32236] animate-spin mx-auto" />
+                <h3 className="font-bold text-base">
+                  {isRtl ? 'جارٍ تحليل بنود عرض السعر بالذكاء الاصطناعي...' : 'Neural OCR & Table Parser Extracting Quotation Fields...'}
+                </h3>
+                <p className={`text-xs ${textMuted}`}>
+                  {isRtl ? 'يتم استخراج الأسعار وشروط الدفع والضمان تلقائياً' : 'Mapping commercial line items, currency, and warranty clauses'}
+                </p>
+              </div>
+            ) : aiStatus === 'Failed' ? (
+              <div className="py-16 text-center space-y-4">
+                <AlertTriangle className="w-10 h-10 text-[#E32236] mx-auto" />
+                <h3 className="font-bold text-base text-[#E32236]">
+                  {isRtl ? 'فشل استخراج البيانات من المستند' : 'Automated Document Extraction Interrupted'}
+                </h3>
+                <p className={`text-xs max-w-md mx-auto ${textMuted}`}>
+                  {isRtl
+                    ? 'تعذر قراءة بعض الجداول في ملف PDF. يمكنك إعادة تشغيل الاستخراج الذكي.'
+                    : 'The parser encountered an unreadable layer in the PDF stream. Re-run extraction engine to recover.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={handleRetryAi}
+                  className="px-5 py-2.5 rounded-lg bg-[#E32236] text-white text-xs font-bold inline-flex items-center gap-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  {t.retryExtraction}
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSaveApprove} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div
+                    onMouseEnter={() => setActiveField('supplierName')}
+                    onFocus={() => setActiveField('supplierName')}
+                  >
+                    <label className="block text-xs font-bold uppercase mb-1.5">{t.supplierName}</label>
+                    <input
+                      type="text"
+                      value={form.supplierName}
+                      onChange={(e) => setForm({ ...form, supplierName: e.target.value })}
+                      className={`w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none focus:border-[#E32236] ${bgSubtle}`}
+                    />
+                  </div>
+
+                  <div
+                    onMouseEnter={() => setActiveField('totalPrice')}
+                    onFocus={() => setActiveField('totalPrice')}
+                    className="grid grid-cols-3 gap-2"
+                  >
+                    <div className="col-span-2">
+                      <label className="block text-xs font-bold uppercase mb-1.5">{t.totalPrice}</label>
+                      <input
+                        type="number"
+                        value={form.totalPrice}
+                        onChange={(e) => setForm({ ...form, totalPrice: e.target.value })}
+                        className={`w-full px-3.5 py-2.5 rounded-lg border text-sm font-mono-code outline-none ${
+                          !form.totalPrice ? 'border-amber-500 bg-amber-500/10' : bgSubtle
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase mb-1.5">{t.currency}</label>
+                      <input
+                        type="text"
+                        value={form.currency}
+                        onChange={(e) => setForm({ ...form, currency: e.target.value })}
+                        className={`w-full px-3.5 py-2.5 rounded-lg border text-sm font-mono-code outline-none ${bgSubtle}`}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div
+                    onMouseEnter={() => setActiveField('deliveryDays')}
+                    onFocus={() => setActiveField('deliveryDays')}
+                  >
+                    <label className="block text-xs font-bold uppercase mb-1.5">{t.deliveryDuration}</label>
+                    <input
+                      type="number"
+                      value={form.deliveryDays}
+                      onChange={(e) => setForm({ ...form, deliveryDays: e.target.value })}
+                      className={`w-full px-3.5 py-2.5 rounded-lg border text-sm font-mono-code outline-none ${
+                        !form.deliveryDays ? 'border-amber-500 bg-amber-500/10' : bgSubtle
+                      }`}
+                    />
+                  </div>
+
+                  <div
+                    onMouseEnter={() => setActiveField('warrantyMonths')}
+                    onFocus={() => setActiveField('warrantyMonths')}
+                  >
+                    <label className="block text-xs font-bold uppercase mb-1.5">{t.warrantyDuration}</label>
+                    <input
+                      type="number"
+                      value={form.warrantyMonths}
+                      onChange={(e) => setForm({ ...form, warrantyMonths: e.target.value })}
+                      className={`w-full px-3.5 py-2.5 rounded-lg border text-sm font-mono-code outline-none ${bgSubtle}`}
+                    />
+                  </div>
+                </div>
+
+                <div
+                  onMouseEnter={() => setActiveField('paymentTerms')}
+                  onFocus={() => setActiveField('paymentTerms')}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold uppercase">{t.paymentTerms}</label>
+                    {!form.paymentTerms.trim() && (
+                      <span className="text-[11px] font-bold text-amber-500 flex items-center gap-1">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        {t.missingFieldWarn}
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={form.paymentTerms}
+                    onChange={(e) => setForm({ ...form, paymentTerms: e.target.value })}
+                    placeholder="e.g., Net 30"
+                    className={`w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none transition ${
+                      !form.paymentTerms.trim()
+                        ? 'border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/20'
+                        : `${bgSubtle} focus:border-[#E32236]`
+                    }`}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase mb-1.5">{t.notes}</label>
+                  <textarea
+                    rows={3}
+                    value={form.notes}
+                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                    className={`w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none focus:border-[#E32236] ${bgSubtle}`}
+                  />
+                </div>
+
+                <div className="pt-4 border-t border-black/10 dark:border-white/10 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setActiveScreen(4)}
+                    className={`px-4 py-2.5 rounded-lg border text-xs font-semibold ${bgSubtle}`}
+                  >
+                    {t.cancel}
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 rounded-lg bg-[#E32236] hover:bg-[#C81B2D] text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-[#E32236]/25"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    {t.saveAndApprove}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ==========================================================================
+  // TOP STUDIO & 44-CONFIGURATION PRESENTATION BAR
+  // ==========================================================================
+  const StudioPresentationBar = () => {
+    const screenList = [
+      { num: 1, label: '01 Login' },
+      { num: 2, label: '02 Requests' },
+      { num: 3, label: '03 Create' },
+      { num: 4, label: '04 Details (3D)' },
+      { num: 5, label: '05 Approvals' },
+      { num: 6, label: '06 Audit Log' },
+      { num: 7, label: '07 Supplier Reqs' },
+      { num: 8, label: '08 Upload PDF' },
+      { num: 9, label: '09 Invite Modal' },
+      { num: 10, label: '10 AI Review (3D)' },
+      { num: 11, label: '11 Comparison (3D)' }
+    ];
+
+    if (presentationMode) {
+      return (
+        <button
+          onClick={() => setPresentationMode(false)}
+          className="fixed bottom-4 right-4 z-50 px-3 py-1.5 rounded-full bg-[#E32236] text-white text-xs font-bold shadow-lg opacity-80 hover:opacity-100 flex items-center gap-1.5"
+        >
+          <Minimize2 className="w-3.5 h-3.5" />
+          {t.exitPresentation}
+        </button>
+      );
+    }
+
+    return (
+      <div className="sticky top-0 z-40 bg-[#090B10] text-[#F2F3F5] border-b border-white/10 px-4 py-2 text-xs">
+        <div className="max-w-[1440px] mx-auto flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <span className="px-2 py-0.5 rounded bg-[#E32236] text-white font-extrabold tracking-wider text-[10px]">
+              44-CONFIG STUDIO
+            </span>
+            <select
+              value={activeScreen}
+              onChange={(e) => jumpToScreen(Number(e.target.value))}
+              className="bg-[#191C24] border border-white/15 rounded px-2.5 py-1 text-xs font-semibold outline-none focus:border-[#E32236]"
+            >
+              {screenList.map((s) => (
+                <option key={s.num} value={s.num}>{s.label}</option>
+              ))}
+            </select>
+
+            <select
+              value={currentUser?.role || 'requester'}
+              onChange={(e) => loginAsRole(e.target.value)}
+              className="bg-[#191C24] border border-white/15 rounded px-2.5 py-1 text-xs font-semibold outline-none focus:border-[#E32236]"
+            >
+              <option value="requester">Role: Requester (Belal)</option>
+              <option value="officer">Role: Officer (Mona)</option>
+              <option value="manager">Role: Manager (Youssef)</option>
+              <option value="supplier">Role: Supplier (TechSupply)</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setTheme(isDark ? 'light' : 'dark')}
+              className="px-2.5 py-1 rounded bg-[#191C24] border border-white/15 hover:border-[#E32236] flex items-center gap-1.5 font-semibold"
+            >
+              {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-sky-400" />}
+              <span>{isDark ? 'Dark' : 'Light'}</span>
+            </button>
+
+            <button
+              onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
+              className="px-2.5 py-1 rounded bg-[#191C24] border border-white/15 hover:border-[#E32236] flex items-center gap-1.5 font-semibold"
+            >
+              <Globe className="w-3.5 h-3.5 text-[#E32236]" />
+              <span>{lang === 'en' ? 'EN -> العربية' : 'العربية -> EN'}</span>
+            </button>
+
+            <button
+              onClick={handleResetDemo}
+              className="px-2.5 py-1 rounded bg-[#191C24] border border-white/15 hover:border-[#E32236] flex items-center gap-1 text-slate-300"
+              title={t.resetDemo}
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{t.resetDemo}</span>
+            </button>
+
+            <button
+              onClick={() => setPresentationMode(true)}
+              className="px-2.5 py-1 rounded bg-[#E32236] hover:bg-[#C81B2D] text-white font-bold flex items-center gap-1"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">{t.presentationMode}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ==========================================================================
+  // ENTERPRISE APPLICATION SHELL (SCREENS 02–11)
+  // ==========================================================================
+  const renderAppShell = () => {
+    const role = currentUser?.role || 'requester';
+
+    const navItems = [
+      ...(role !== 'supplier'
+        ? [{ id: 2, label: t.navRequests, icon: FileText }]
+        : []),
+      ...(role === 'requester'
+        ? [{ id: 3, label: t.navCreateRequest, icon: Plus }]
+        : []),
+      ...(role === 'manager'
+        ? [{ id: 5, label: t.navApprovals, icon: CheckCircle2 }]
+        : []),
+      ...(role === 'officer' || role === 'manager'
+        ? [
+            { id: 10, label: t.navAiReview, icon: Sparkles },
+            { id: 11, label: t.navComparison, icon: Layers },
+            { id: 6, label: t.navAuditLog, icon: History }
+          ]
+        : []),
+      ...(role === 'supplier'
+        ? [{ id: 7, label: t.navSupplierRequests, icon: Building2 }]
+        : [])
+    ];
+
+    return (
+      <div className={`min-h-[calc(100vh-44px)] flex flex-col lg:flex-row ${bgMain}`}>
+        <aside className={`w-full lg:w-64 shrink-0 border-b lg:border-b-0 lg:border-e flex flex-col justify-between p-5 ${bgSurface}`}>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div onClick={() => setActiveScreen(role === 'supplier' ? 7 : 2)} className="cursor-pointer">
+                <ProcuraLogo theme={theme} size="md" />
+              </div>
+            </div>
+
+            <nav className="flex lg:flex-col gap-1.5 overflow-x-auto pb-1 lg:pb-0">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const active = activeScreen === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveScreen(item.id)}
+                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-bold whitespace-nowrap transition ${
+                      active
+                        ? 'bg-[#E32236] text-white shadow-md shadow-[#E32236]/20'
+                        : `${textMuted} hover:bg-black/5 dark:hover:bg-white/5`
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          <div className="hidden lg:block space-y-3 pt-6 border-t border-black/10 dark:border-white/10">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setTheme(isDark ? 'light' : 'dark')}
+                className={`flex-1 py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 ${bgSubtle} hover:border-[#E32236]`}
+              >
+                {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5" />}
+                {isDark ? 'Light' : 'Dark'}
+              </button>
+              <button
+                onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
+                className={`flex-1 py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 ${bgSubtle} hover:border-[#E32236]`}
+              >
+                <Globe className="w-3.5 h-3.5 text-[#E32236]" />
+                {lang === 'en' ? 'العربية' : 'English'}
+              </button>
+            </div>
+
+            <div className={`p-3 rounded-xl border ${bgSubtle}`}>
+              <div className="text-xs font-extrabold truncate">
+                {isRtl ? (currentUser?.companyNameAr || currentUser?.nameAr) : (currentUser?.companyName || currentUser?.name)}
+              </div>
+              <div className="text-[11px] text-[#E32236] font-semibold mt-0.5">
+                {t[`role_${role}`]}
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setCurrentUser(null);
+                setActiveScreen(1);
+              }}
+              className={`w-full py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-2 ${bgSubtle} hover:border-[#E32236] hover:text-[#E32236]`}
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              {t.logOut}
+            </button>
+          </div>
+        </aside>
+
+        <main className="flex-1 p-5 sm:p-8 lg:p-10 max-w-[1440px] mx-auto w-full">
+          {activeScreen === 2 && <RequestsListScreen />}
+          {activeScreen === 3 && <CreateRequestScreen />}
+          {activeScreen === 4 && <RequestDetailsScreen />}
+          {activeScreen === 5 && <ApprovalsScreen />}
+          {activeScreen === 6 && <AuditLogScreen />}
+          {activeScreen === 7 && <SupplierRequestsScreen />}
+          {activeScreen === 8 && <SupplierUploadScreen />}
+          {activeScreen === 10 && <AiExtractionScreen />}
+          {activeScreen === 11 && <SupplierComparisonView requestId={currentRequest.id} standalone={true} />}
+        </main>
+      </div>
+    );
+  };
+
+  return (
+    <div className={`${lang === 'ar' ? 'font-ar' : 'font-en'} min-h-screen antialiased selection:bg-[#E32236] selection:text-white`}>
+      <FontAndStyleInjector />
+      <StudioPresentationBar />
+
+      {activeScreen === 1 || !currentUser ? <LoginScreen /> : renderAppShell()}
+
+      <SupplierInvitationModal />
+
+      {toast && (
+        <div
+          className={`fixed bottom-5 ${isRtl ? 'left-5' : 'right-5'} z-50 px-4 py-3 rounded-xl shadow-2xl border text-xs font-bold flex items-center gap-2.5 ${
+            toast.type === 'error'
+              ? 'bg-[#E32236] text-white border-[#E32236]'
+              : 'bg-[#191C24] text-white border-emerald-500/50'
+          }`}
+        >
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{toast.msg}</span>
+        </div>
+      )}
+    </div>
+  );
+}
